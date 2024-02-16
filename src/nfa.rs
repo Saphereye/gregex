@@ -1,9 +1,11 @@
+//! This module contains the implementation of a non-deterministic finite automaton (NFA).
+
 use crate::translation::setterminal::SetTerminal;
 use core::panic;
 use std::collections::{HashMap, HashSet};
 
 #[derive(Debug)]
-struct NFA {
+pub struct NFA {
     states: HashSet<u32>,
     accept: HashSet<u32>,
     /// The transition function is a map from a pair of a state and a character to a set of states.
@@ -18,7 +20,6 @@ impl Default for NFA {
             transition_function: HashMap::new(),
         }
     }
-
 }
 
 impl NFA {
@@ -34,7 +35,7 @@ impl NFA {
         }
     }
 
-    fn simulate(&self, input: &str) -> bool {
+    pub fn simulate(&self, input: &str) -> bool {
         let mut current_states = HashSet::new();
         current_states.insert(0);
         for c in input.chars() {

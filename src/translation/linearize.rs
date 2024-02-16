@@ -94,6 +94,12 @@ fn postfix_to_nodetree(postfix: &str) -> Node {
     stack.pop().unwrap()
 }
 
+pub fn linearize(input: &str) -> Node {
+    let infix = string_to_infix(input);
+    let postfix = infix_to_postfix(&infix);
+    postfix_to_nodetree(&postfix)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

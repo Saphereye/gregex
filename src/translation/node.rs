@@ -12,7 +12,7 @@ pub enum Node {
 }
 
 /// The `nullability_set` function returns the set of nullability of a regular expression tree.
-fn nullability_set(regex_tree: &Node) -> HashSet<SetTerminal> {
+pub fn nullability_set(regex_tree: &Node) -> HashSet<SetTerminal> {
     let mut set = HashSet::new();
     match regex_tree {
         Node::Terminal(symbol, code) => {
@@ -38,7 +38,7 @@ fn nullability_set(regex_tree: &Node) -> HashSet<SetTerminal> {
 }
 
 /// The `prefix_set` function returns the set of prefixes of a regular expression tree.
-fn prefix_set(regex_tree: &Node) -> HashSet<SetTerminal> {
+pub fn prefix_set(regex_tree: &Node) -> HashSet<SetTerminal> {
     let mut set = HashSet::new();
     match regex_tree {
         Node::Terminal(symbol, code) => {
@@ -73,7 +73,7 @@ fn prefix_set(regex_tree: &Node) -> HashSet<SetTerminal> {
 }
 
 /// The `suffix_set` function returns the set of suffixes of a regular expression tree.
-fn suffix_set(regex_tree: &Node) -> HashSet<SetTerminal> {
+pub fn suffix_set(regex_tree: &Node) -> HashSet<SetTerminal> {
     let mut set = HashSet::new();
     match regex_tree {
         Node::Terminal(symbol, code) => {
@@ -108,7 +108,7 @@ fn suffix_set(regex_tree: &Node) -> HashSet<SetTerminal> {
 }
 
 /// The `factors_set` function returns the set of factors of a regular expression tree.
-fn factors_set(regex_tree: &Node) -> HashSet<SetTerminal> {
+pub fn factors_set(regex_tree: &Node) -> HashSet<SetTerminal> {
     let mut set = HashSet::new();
     match regex_tree {
         Node::Terminal(symbol, code) => {
