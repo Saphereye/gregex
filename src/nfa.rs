@@ -5,7 +5,7 @@ use core::panic;
 use std::collections::{HashMap, HashSet};
 
 /// The `NFA` struct represents a non-deterministic finite automaton.
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct NFA {
     states: HashSet<u32>,
     accept: HashSet<u32>,
@@ -13,29 +13,7 @@ pub struct NFA {
     transition_function: HashMap<(u32, char), HashSet<u32>>,
 }
 
-impl Default for NFA {
-    fn default() -> Self {
-        NFA {
-            states: HashSet::new(),
-            accept: HashSet::new(),
-            transition_function: HashMap::new(),
-        }
-    }
-}
-
 impl NFA {
-    fn new(
-        states: HashSet<u32>,
-        accept: HashSet<u32>,
-        transition_function: HashMap<(u32, char), HashSet<u32>>,
-    ) -> NFA {
-        NFA {
-            states,
-            accept,
-            transition_function,
-        }
-    }
-
     pub fn simulate(&self, input: &str) -> bool {
         let mut current_states = HashSet::new();
         current_states.insert(0);
@@ -90,7 +68,7 @@ impl NFA {
                 SetTerminal::DoubleElement(_, index1, symbol2, index2) => {
                     nfa.states.insert(index1);
                     nfa.states.insert(index2);
-                    nfa.transition_function.entry((index1, symbol2)).or_insert_with(|| HashSet::new()).insert(index2);
+                    nfa.transition_function.entry((index1, symbol2)).or_insert_with(HashSet::new).insert(index2);
                 }
                 SetTerminal::SingleElement(_, _) => {
                     panic!("SingleElement not supported")

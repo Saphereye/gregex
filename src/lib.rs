@@ -4,10 +4,8 @@
 //! ```rust
 //! use::gregex::regex;
 //!
-//! fn main() {
-//!     let regex = regex("(a.b)*");
-//!     assert!(regex.simulate("abab"));
-//! }
+//! let regex = regex("(a.b)*");
+//! assert!(regex.simulate("abab"));
 //! ```
 //!
 //! The regex function uses the regular expression string to create a NFA that can be used to simulate the regular expression.
@@ -38,10 +36,8 @@ type Regex = NFA;
 /// ```rust
 /// use::gregex::regex;
 ///
-/// fn main() {
-///     let regex = regex("(a.b)*");
-///     assert!(regex.simulate("abab"));
-/// }
+/// let regex = regex("(a.b)*");
+/// assert!(regex.simulate("abab"));
 /// ```
 pub fn regex(regex_string: &str) -> Regex {
     let regex_tree = linearize(regex_string);

@@ -15,17 +15,17 @@ pub enum Node {
 pub fn nullability_set(regex_tree: &Node) -> HashSet<SetTerminal> {
     let mut set = HashSet::new();
     match regex_tree {
-        Node::Terminal(symbol, code) => {
+        Node::Terminal(_, _) => {
             set.insert(SetTerminal::Empty);
         }
         Node::Operation(op, left, right) => match op {
             Operator::Or => {
                 set.extend(nullability_set(left));
-                set.extend(nullability_set(&*right.as_ref().unwrap()));
+                set.extend(nullability_set(right.as_ref().unwrap()));
             }
             Operator::Concat => {
                 set.extend(nullability_set(left));
-                let right_set = nullability_set(&*right.as_ref().unwrap());
+                let right_set = nullability_set(right.as_ref().unwrap());
                 set.extend(right_set);
             }
             Operator::Production => {
@@ -47,14 +47,14 @@ pub fn prefix_set(regex_tree: &Node) -> HashSet<SetTerminal> {
         Node::Operation(op, left, right) => match op {
             Operator::Or => {
                 let left_set = prefix_set(left);
-                let right_set = prefix_set(&*right.as_ref().unwrap());
+                let right_set = prefix_set(right.as_ref().unwrap());
                 set.extend(left_set);
                 set.extend(right_set);
             }
             Operator::Concat => {
                 let left_set = prefix_set(left);
                 set.extend(left_set);
-                let right_set = prefix_set(&*right.as_ref().unwrap());
+                let right_set = prefix_set(right.as_ref().unwrap());
                 let nullable_set = nullability_set(left);
 
                 // If the left expression is nullable, include the first set of the right expression
@@ -82,15 +82,15 @@ pub fn suffix_set(regex_tree: &Node) -> HashSet<SetTerminal> {
         Node::Operation(op, left, right) => match op {
             Operator::Or => {
                 let left_set = suffix_set(left);
-                let right_set = suffix_set(&*right.as_ref().unwrap());
+                let right_set = suffix_set(right.as_ref().unwrap());
                 set.extend(left_set);
                 set.extend(right_set);
             }
             Operator::Concat => {
-                let left_set = suffix_set(&*right.as_ref().unwrap());
+                let left_set = suffix_set(right.as_ref().unwrap());
                 set.extend(left_set);
                 let right_set = suffix_set(left);
-                let nullable_set = nullability_set(&*right.as_ref().unwrap());
+                let nullable_set = nullability_set(right.as_ref().unwrap());
 
                 // If the left expression is nullable, include the first set of the right expression
                 if nullable_set.contains(&SetTerminal::Epsilon) {
@@ -111,21 +111,21 @@ pub fn suffix_set(regex_tree: &Node) -> HashSet<SetTerminal> {
 pub fn factors_set(regex_tree: &Node) -> HashSet<SetTerminal> {
     let mut set = HashSet::new();
     match regex_tree {
-        Node::Terminal(symbol, code) => {
+        Node::Terminal(_, _) => {
             set.insert(SetTerminal::Empty);
         }
         Node::Operation(op, left, right) => match op {
             Operator::Or => {
                 let left_set = factors_set(left);
-                let right_set = factors_set(&*right.as_ref().unwrap());
+                let right_set = factors_set(right.as_ref().unwrap());
                 set.extend(left_set);
                 set.extend(right_set);
             }
             Operator::Concat => {
                 let left_set = factors_set(left);
-                let right_set = factors_set(&*right.as_ref().unwrap());
+                let right_set = factors_set(right.as_ref().unwrap());
                 let suffix_set = suffix_set(left);
-                let prefix_set = prefix_set(&*right.as_ref().unwrap());
+                let prefix_set = prefix_set(right.as_ref().unwrap());
                 set.extend(left_set);
                 set.extend(right_set);
                 for i in suffix_set {

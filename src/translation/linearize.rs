@@ -1,8 +1,4 @@
 //! Converts input regex to its linear form. Then it converts it into a Node tree.
-
-use std::collections::HashMap;
-use std::process::Child;
-
 use crate::translation::node::Node;
 use crate::translation::operator::Operator;
 

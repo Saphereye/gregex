@@ -1,6 +1,6 @@
 [package]
 name = "gregex"
-version = "0.4.3"
+version = "0.4.4"
 edition = "2021"
 authors = ["Saphereye <adarshdas950@gmail.com>"]
 license = "MIT"
@@ -9,7 +9,7 @@ keywords = ["regex", "nfa", "automata"]
 categories = ["text-processing"]
 documentation = "https://docs.rs/gregex"
 exclude = [
-    ".github/workflows/rust.yml",
+    ".github/",
     ".gitignore",
     "LICENSE",
     "README.md",
