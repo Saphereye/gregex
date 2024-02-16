@@ -1,4 +1,4 @@
-//! This module contains the implementation of the `Node` enum and the functions to calculate the nullability, prefix, suffix and factors sets of a regular expression tree.
+//! Contains the implementation of the `Node` enum and the functions to calculate the nullability, prefix, suffix and factors sets of a regular expression tree.
 
 use crate::translation::operator::Operator;
 use crate::translation::setterminal::SetTerminal;

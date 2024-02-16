@@ -1,4 +1,4 @@
-//! This module contains the `SetTerminal` enum, which represents the different types of terminals that can be used in a regular expression.
+//! Contains the `SetTerminal` enum, which represents the different types of terminals that can be used in a regular expression.
 
 use std::hash::{Hash, Hasher};
 

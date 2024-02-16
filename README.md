@@ -8,8 +8,8 @@ Gregex is a regular expression solver which utilizes Non-deterministic Finite Au
 use::gregex::regex;
 
 fn main() {
-    let regex = regex('(a.b)*');
-    assert!(regex.simulate('abab'));
+    let regex = regex("(a.b)*");
+    assert!(regex.simulate("abab"));
 }
 ```
 

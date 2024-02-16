@@ -1,9 +1,10 @@
-//! This module contains the implementation of a non-deterministic finite automaton (NFA).
+//! Has the implementation of a non-deterministic finite automaton (NFA).
 
 use crate::translation::setterminal::SetTerminal;
 use core::panic;
 use std::collections::{HashMap, HashSet};
 
+/// The `NFA` struct represents a non-deterministic finite automaton.
 #[derive(Debug)]
 pub struct NFA {
     states: HashSet<u32>,
