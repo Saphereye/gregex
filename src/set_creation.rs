@@ -1,0 +1,549 @@
+use std::collections::HashSet;
+use std::hash::{Hash, Hasher};
+
+/// The `Operator` enum represents the different operations that can be performed on a regular expression.
+enum Operator {
+    Or,
+    Concat,
+    Production,
+    Plus,
+    Question,
+}
+
+/// The `SetTerminal` enum represents the different types of terminals that can be used in a regular expression.
+#[derive(Debug)]
+enum SetTerminal {
+    SingleElement(char, u32),            // a₁
+    DoubleElement(char, u32, char, u32), // a₁b₂
+    Epsilon,                             // ε
+    Empty,                               // ∅
+}
+
+impl SetTerminal {
+    /// Performs the cartesian product of two `SetTerminal` instances.
+    fn product(&self, other: &SetTerminal) -> SetTerminal {
+        match (self, other) {
+            (SetTerminal::SingleElement(a, a_code), SetTerminal::SingleElement(b, b_code)) => {
+                SetTerminal::DoubleElement(*a, *a_code, *b, *b_code)
+            }
+            (SetTerminal::SingleElement(a, a_code), SetTerminal::Epsilon) => {
+                SetTerminal::SingleElement(*a, *a_code)
+            }
+            (SetTerminal::Epsilon, SetTerminal::SingleElement(b, b_code)) => {
+                SetTerminal::SingleElement(*b, *b_code)
+            }
+            (SetTerminal::Epsilon, SetTerminal::Epsilon) => SetTerminal::Epsilon,
+            (SetTerminal::Empty, _) => SetTerminal::Empty,
+            (_, SetTerminal::Empty) => SetTerminal::Empty,
+            _ => unreachable!("Invalid product"),
+        }
+    }
+}
+
+impl PartialEq for SetTerminal {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (SetTerminal::SingleElement(a, a_code), SetTerminal::SingleElement(b, b_code)) => {
+                a == b && a_code == b_code
+            }
+            (
+                SetTerminal::DoubleElement(a, a_code, b, b_code),
+                SetTerminal::DoubleElement(c, c_code, d, d_code),
+            ) => a == c && a_code == c_code && b == d && b_code == d_code,
+            (SetTerminal::Epsilon, SetTerminal::Epsilon) => true,
+            (SetTerminal::Empty, SetTerminal::Empty) => true,
+            _ => false,
+        }
+    }
+}
+
+impl Eq for SetTerminal {}
+
+impl Hash for SetTerminal {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        match self {
+            SetTerminal::SingleElement(a, a_code) => {
+                a.hash(state);
+                a_code.hash(state);
+            }
+            SetTerminal::DoubleElement(a, a_code, b, b_code) => {
+                a.hash(state);
+                a_code.hash(state);
+                b.hash(state);
+                b_code.hash(state);
+            }
+            SetTerminal::Epsilon => {
+                "Epsilon".hash(state);
+            }
+            SetTerminal::Empty => {
+                "Empty".hash(state);
+            }
+        }
+    }
+}
+
+/// The `Node` enum represents the different types of nodes that can be used in a regular expression tree.
+enum Node {
+    Operation(Operator, Box<Node>, Option<Box<Node>>),
+    Terminal(char, u32),
+}
+
+/// The `nullability_set` function returns the set of nullability of a regular expression tree.
+fn nullability_set(regex_tree: &Node) -> HashSet<SetTerminal> {
+    let mut set = HashSet::new();
+    match regex_tree {
+        Node::Terminal(symbol, code) => {
+            set.insert(SetTerminal::Empty);
+        }
+        Node::Operation(op, left, right) => match op {
+            Operator::Or => {
+                set.extend(nullability_set(left));
+                set.extend(nullability_set(&*right.as_ref().unwrap()));
+            }
+            Operator::Concat => {
+                set.extend(nullability_set(left));
+                let right_set = nullability_set(&*right.as_ref().unwrap());
+                set.extend(right_set);
+            }
+            Operator::Production => {
+                set.insert(SetTerminal::Epsilon);
+            }
+            _ => todo!(),
+        },
+    }
+    set
+}
+
+/// The `prefix_set` function returns the set of prefixes of a regular expression tree.
+fn prefix_set(regex_tree: &Node) -> HashSet<SetTerminal> {
+    let mut set = HashSet::new();
+    match regex_tree {
+        Node::Terminal(symbol, code) => {
+            set.insert(SetTerminal::SingleElement(*symbol, *code));
+        }
+        Node::Operation(op, left, right) => match op {
+            Operator::Or => {
+                let left_set = prefix_set(left);
+                let right_set = prefix_set(&*right.as_ref().unwrap());
+                set.extend(left_set);
+                set.extend(right_set);
+            }
+            Operator::Concat => {
+                let left_set = prefix_set(left);
+                set.extend(left_set);
+                let right_set = prefix_set(&*right.as_ref().unwrap());
+                let nullable_set = nullability_set(left);
+
+                // If the left expression is nullable, include the first set of the right expression
+                if nullable_set.contains(&SetTerminal::Epsilon) {
+                    set.extend(right_set);
+                }
+            }
+            Operator::Production => {
+                let left_set = prefix_set(left);
+                set = left_set;
+            }
+            _ => todo!(),
+        },
+    }
+    set
+}
+
+/// The `suffix_set` function returns the set of suffixes of a regular expression tree.
+fn suffix_set(regex_tree: &Node) -> HashSet<SetTerminal> {
+    let mut set = HashSet::new();
+    match regex_tree {
+        Node::Terminal(symbol, code) => {
+            set.insert(SetTerminal::SingleElement(*symbol, *code));
+        }
+        Node::Operation(op, left, right) => match op {
+            Operator::Or => {
+                let left_set = suffix_set(left);
+                let right_set = suffix_set(&*right.as_ref().unwrap());
+                set.extend(left_set);
+                set.extend(right_set);
+            }
+            Operator::Concat => {
+                let left_set = suffix_set(&*right.as_ref().unwrap());
+                set.extend(left_set);
+                let right_set = suffix_set(left);
+                let nullable_set = nullability_set(&*right.as_ref().unwrap());
+
+                // If the left expression is nullable, include the first set of the right expression
+                if nullable_set.contains(&SetTerminal::Epsilon) {
+                    set.extend(right_set);
+                }
+            }
+            Operator::Production => {
+                let left_set = suffix_set(left);
+                set = left_set;
+            }
+            _ => todo!(),
+        },
+    }
+    set
+}
+
+/// The `factors_set` function returns the set of factors of a regular expression tree.
+fn factors_set(regex_tree: &Node) -> HashSet<SetTerminal> {
+    let mut set = HashSet::new();
+    match regex_tree {
+        Node::Terminal(symbol, code) => {
+            set.insert(SetTerminal::Empty);
+        }
+        Node::Operation(op, left, right) => match op {
+            Operator::Or => {
+                let left_set = factors_set(left);
+                let right_set = factors_set(&*right.as_ref().unwrap());
+                set.extend(left_set);
+                set.extend(right_set);
+            }
+            Operator::Concat => {
+                let left_set = factors_set(left);
+                let right_set = factors_set(&*right.as_ref().unwrap());
+                let suffix_set = suffix_set(left);
+                let prefix_set = prefix_set(&*right.as_ref().unwrap());
+                set.extend(left_set);
+                set.extend(right_set);
+                for i in suffix_set {
+                    for j in &prefix_set {
+                        set.insert(i.product(j));
+                    }
+                }
+            }
+            Operator::Production => {
+                let left_set = factors_set(left);
+                let suffix_set = suffix_set(left);
+                let prefix_set = prefix_set(left);
+                set.extend(left_set);
+
+                for i in suffix_set {
+                    for j in &prefix_set {
+                        set.insert(i.product(j));
+                    }
+                }
+            }
+            _ => todo!(),
+        },
+    }
+
+    if set.contains(&SetTerminal::Empty) && set.len() > 1 {
+        set.remove(&SetTerminal::Empty);
+    }
+    set
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn nullability_set_test_or() {
+        let tree = Node::Operation(
+            Operator::Or,
+            Box::new(Node::Terminal('a', 1)),
+            Option::Some(Box::new(Node::Terminal('b', 2))),
+        );
+
+        let set = nullability_set(&tree);
+        let mut test_set = HashSet::new();
+        test_set.insert(SetTerminal::Empty);
+        assert_eq!(set, test_set);
+    }
+
+    #[test]
+    fn nullability_set_test_concat() {
+        let tree = Node::Operation(
+            Operator::Concat,
+            Box::new(Node::Terminal('a', 1)),
+            Option::Some(Box::new(Node::Terminal('b', 2))),
+        );
+
+        let set = nullability_set(&tree);
+        let mut test_set = HashSet::new();
+        test_set.insert(SetTerminal::Empty);
+        assert_eq!(set, test_set);
+    }
+
+    #[test]
+    fn nullability_set_test_production() {
+        let tree = Node::Operation(Operator::Production, Box::new(Node::Terminal('a', 1)), None);
+
+        let set = nullability_set(&tree);
+        let mut test_set = HashSet::new();
+        test_set.insert(SetTerminal::Epsilon);
+        assert_eq!(set, test_set);
+    }
+
+    #[test]
+    fn nullability_set_test_terminal() {
+        let tree = Node::Terminal('a', 1);
+
+        let set = nullability_set(&tree);
+        let mut test_set = HashSet::new();
+        test_set.insert(SetTerminal::Empty);
+        assert_eq!(set, test_set);
+    }
+
+    #[test]
+    fn prefix_set_test_or() {
+        let tree = Node::Operation(
+            Operator::Or,
+            Box::new(Node::Terminal('a', 1)),
+            Option::Some(Box::new(Node::Terminal('b', 2))),
+        );
+
+        let set = prefix_set(&tree);
+        let mut test_set = HashSet::new();
+        test_set.insert(SetTerminal::SingleElement('a', 1));
+        test_set.insert(SetTerminal::SingleElement('b', 2));
+        assert_eq!(set, test_set);
+    }
+
+    #[test]
+    fn prefix_set_test_production() {
+        let tree = Node::Operation(Operator::Production, Box::new(Node::Terminal('a', 1)), None);
+
+        let set = prefix_set(&tree);
+        let mut test_set = HashSet::new();
+        test_set.insert(SetTerminal::SingleElement('a', 1));
+        assert_eq!(set, test_set);
+    }
+
+    #[test]
+    fn prefix_set_test_concat() {
+        let tree = Node::Operation(
+            Operator::Concat,
+            Box::new(Node::Terminal('a', 1)),
+            Option::Some(Box::new(Node::Terminal('b', 2))),
+        );
+
+        let set = prefix_set(&tree);
+        let mut test_set = HashSet::new();
+        test_set.insert(SetTerminal::SingleElement('a', 1));
+        assert_eq!(set, test_set);
+    }
+
+    #[test]
+    fn prefix_set_test_terminal() {
+        let tree = Node::Terminal('a', 1);
+
+        let set = prefix_set(&tree);
+        let mut test_set = HashSet::new();
+        test_set.insert(SetTerminal::SingleElement('a', 1));
+        assert_eq!(set, test_set);
+    }
+
+    #[test]
+    fn prefix_set_test_complete() {
+        // Linearized regex: (a(ab)*)* + (ba)*
+        let tree = Node::Operation(
+            Operator::Or,
+            Box::new(Node::Operation(
+                Operator::Production,
+                Box::new(Node::Operation(
+                    Operator::Concat,
+                    Box::new(Node::Terminal('a', 1)),
+                    Some(Box::new(Node::Operation(
+                        Operator::Production,
+                        Box::new(Node::Operation(
+                            Operator::Concat,
+                            Box::new(Node::Terminal('a', 2)),
+                            Option::Some(Box::new(Node::Terminal('b', 3))),
+                        )),
+                        None,
+                    ))),
+                )),
+                None,
+            )),
+            Option::Some(Box::new(Node::Operation(
+                Operator::Production,
+                Box::new(Node::Operation(
+                    Operator::Concat,
+                    Box::new(Node::Terminal('b', 4)),
+                    Option::Some(Box::new(Node::Terminal('a', 5))),
+                )),
+                None,
+            ))),
+        );
+
+        let set = prefix_set(&tree);
+        let mut test_set = HashSet::new();
+        test_set.insert(SetTerminal::SingleElement('a', 1));
+        test_set.insert(SetTerminal::SingleElement('b', 4));
+        assert_eq!(set, test_set);
+    }
+
+    #[test]
+    fn suffix_set_test_or() {
+        let tree = Node::Operation(
+            Operator::Or,
+            Box::new(Node::Terminal('a', 1)),
+            Option::Some(Box::new(Node::Terminal('b', 2))),
+        );
+
+        let set = suffix_set(&tree);
+        let mut test_set = HashSet::new();
+        test_set.insert(SetTerminal::SingleElement('a', 1));
+        test_set.insert(SetTerminal::SingleElement('b', 2));
+        assert_eq!(set, test_set);
+    }
+
+    #[test]
+    fn suffix_set_test_production() {
+        let tree = Node::Operation(Operator::Production, Box::new(Node::Terminal('a', 1)), None);
+
+        let set = suffix_set(&tree);
+        let mut test_set = HashSet::new();
+        test_set.insert(SetTerminal::SingleElement('a', 1));
+        assert_eq!(set, test_set);
+    }
+
+    #[test]
+    fn suffix_set_test_concat() {
+        let tree = Node::Operation(
+            Operator::Concat,
+            Box::new(Node::Terminal('a', 1)),
+            Option::Some(Box::new(Node::Terminal('b', 2))),
+        );
+
+        let set = suffix_set(&tree);
+        let mut test_set = HashSet::new();
+        test_set.insert(SetTerminal::SingleElement('b', 2));
+        assert_eq!(set, test_set);
+    }
+
+    #[test]
+    fn suffix_set_test_terminal() {
+        let tree = Node::Terminal('a', 1);
+
+        let set = suffix_set(&tree);
+        let mut test_set = HashSet::new();
+        test_set.insert(SetTerminal::SingleElement('a', 1));
+        assert_eq!(set, test_set);
+    }
+
+    #[test]
+    fn suffix_set_test_complete() {
+        // Linearized regex: (a(ab)*)* + (ba)*
+        let tree = Node::Operation(
+            Operator::Or,
+            Box::new(Node::Operation(
+                Operator::Production,
+                Box::new(Node::Operation(
+                    Operator::Concat,
+                    Box::new(Node::Terminal('a', 1)),
+                    Some(Box::new(Node::Operation(
+                        Operator::Production,
+                        Box::new(Node::Operation(
+                            Operator::Concat,
+                            Box::new(Node::Terminal('a', 2)),
+                            Option::Some(Box::new(Node::Terminal('b', 3))),
+                        )),
+                        None,
+                    ))),
+                )),
+                None,
+            )),
+            Option::Some(Box::new(Node::Operation(
+                Operator::Production,
+                Box::new(Node::Operation(
+                    Operator::Concat,
+                    Box::new(Node::Terminal('b', 4)),
+                    Option::Some(Box::new(Node::Terminal('a', 5))),
+                )),
+                None,
+            ))),
+        );
+
+        let set = suffix_set(&tree);
+        let mut test_set = HashSet::new();
+        test_set.insert(SetTerminal::SingleElement('a', 1));
+        test_set.insert(SetTerminal::SingleElement('b', 3));
+        test_set.insert(SetTerminal::SingleElement('a', 5));
+        assert_eq!(set, test_set);
+    }
+
+    #[test]
+    fn factors_set_test_or() {
+        let tree = Node::Operation(
+            Operator::Or,
+            Box::new(Node::Terminal('a', 1)),
+            Option::Some(Box::new(Node::Terminal('b', 2))),
+        );
+
+        let set = factors_set(&tree);
+        let mut test_set = HashSet::new();
+        test_set.insert(SetTerminal::Empty);
+        assert_eq!(set, test_set);
+    }
+
+    #[test]
+    fn factors_set_test_production() {
+        let tree = Node::Operation(Operator::Production, Box::new(Node::Terminal('a', 1)), None);
+
+        let set = factors_set(&tree);
+        let mut test_set = HashSet::new();
+        test_set.insert(SetTerminal::DoubleElement('a', 1, 'a', 1));
+        assert_eq!(set, test_set);
+    }
+
+    #[test]
+    fn factors_set_test_concat() {
+        let tree = Node::Operation(
+            Operator::Concat,
+            Box::new(Node::Terminal('a', 1)),
+            Option::Some(Box::new(Node::Terminal('b', 2))),
+        );
+
+        let set = factors_set(&tree);
+        let mut test_set = HashSet::new();
+        test_set.insert(SetTerminal::DoubleElement('a', 1, 'b', 2));
+        assert_eq!(set, test_set);
+    }
+
+    #[test]
+    fn factors_set_test_complete() {
+        // Linearized regex: (a(ab)*)* + (ba)*
+        let tree = Node::Operation(
+            Operator::Or,
+            Box::new(Node::Operation(
+                Operator::Production,
+                Box::new(Node::Operation(
+                    Operator::Concat,
+                    Box::new(Node::Terminal('a', 1)),
+                    Some(Box::new(Node::Operation(
+                        Operator::Production,
+                        Box::new(Node::Operation(
+                            Operator::Concat,
+                            Box::new(Node::Terminal('a', 2)),
+                            Option::Some(Box::new(Node::Terminal('b', 3))),
+                        )),
+                        None,
+                    ))),
+                )),
+                None,
+            )),
+            Option::Some(Box::new(Node::Operation(
+                Operator::Production,
+                Box::new(Node::Operation(
+                    Operator::Concat,
+                    Box::new(Node::Terminal('b', 4)),
+                    Option::Some(Box::new(Node::Terminal('a', 5))),
+                )),
+                None,
+            ))),
+        );
+
+        let set = factors_set(&tree);
+        let mut test_set = HashSet::new();
+        test_set.insert(SetTerminal::DoubleElement('a', 1, 'a', 2));
+        test_set.insert(SetTerminal::DoubleElement('a', 1, 'a', 1));
+        test_set.insert(SetTerminal::DoubleElement('a', 2, 'b', 3));
+        test_set.insert(SetTerminal::DoubleElement('b', 3, 'a', 1));
+        test_set.insert(SetTerminal::DoubleElement('b', 3, 'a', 2));
+        test_set.insert(SetTerminal::DoubleElement('b', 4, 'a', 5));
+        test_set.insert(SetTerminal::DoubleElement('a', 5, 'b', 4));
+        assert_eq!(set, test_set);
+    }
+}
