@@ -1,7 +1,21 @@
 [package]
 name = "gregex"
-version = "0.4.0"
+version = "0.4.1"
 edition = "2021"
+authors = ["Saphereye <adarshdas950@gmail.com>"]
+license = "MIT"
+description = "Regex solver utilizing NFA"
+keywords = ["regex", "nfa", "automata"]
+categories = ["text-processing"]
+documentation = "https://docs.rs/gregex"
+exclude = [
+    ".github/workflows/rust.yml",
+    ".gitignore",
+    "LICENSE",
+    "README.md",
+]
+readme = "README.md"
+repository = "https://github.com/Saphereye/gregex"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
