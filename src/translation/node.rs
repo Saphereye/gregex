@@ -1,9 +1,12 @@
+//! This module contains the implementation of the `Node` enum and the functions to calculate the nullability, prefix, suffix and factors sets of a regular expression tree.
+
 use crate::translation::operator::Operator;
 use crate::translation::setterminal::SetTerminal;
 use std::collections::HashSet;
 
 /// The `Node` enum represents the different types of nodes that can be used in a regular expression tree.
-enum Node {
+#[derive(Debug, PartialEq, Eq)]
+pub enum Node {
     Operation(Operator, Box<Node>, Option<Box<Node>>),
     Terminal(char, u32),
 }

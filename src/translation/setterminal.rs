@@ -1,3 +1,5 @@
+//! This module contains the `SetTerminal` enum, which represents the different types of terminals that can be used in a regular expression.
+
 use std::hash::{Hash, Hasher};
 
 /// The `SetTerminal` enum represents the different types of terminals that can be used in a regular expression.
