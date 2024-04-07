@@ -7,12 +7,13 @@ use std::collections::HashSet;
 /// The `Node` enum represents the different types of nodes that can be used in a regular expression tree.
 #[derive(Debug, PartialEq, Eq)]
 pub enum Node {
+    /// Represents an operation on one or two nodes.
     Operation(Operator, Box<Node>, Option<Box<Node>>),
     /// `char` represents the character, `u32` represent the unique identifier of the node.
     Terminal(char, u32),
 }
 
-/// The `nullability_set` function returns the set of nullability of a regular expression tree.
+/// The `nullability_set` function returns the set of [SetTerminal] that are nullable in a regular expression tree.
 pub fn nullability_set(regex_tree: &Node) -> HashSet<SetTerminal> {
     let mut set = HashSet::new();
     match regex_tree {
@@ -38,7 +39,7 @@ pub fn nullability_set(regex_tree: &Node) -> HashSet<SetTerminal> {
     set
 }
 
-/// The `prefix_set` function returns the set of prefixes of a regular expression tree.
+/// The `prefix_set` function returns the set of [SetTerminal] that are prefixes of a regular expression tree.
 pub fn prefix_set(regex_tree: &Node) -> HashSet<SetTerminal> {
     let mut set = HashSet::new();
     match regex_tree {
@@ -73,7 +74,7 @@ pub fn prefix_set(regex_tree: &Node) -> HashSet<SetTerminal> {
     set
 }
 
-/// The `suffix_set` function returns the set of suffixes of a regular expression tree.
+/// The `suffix_set` function returns the set of [SetTerminal] that are suffixes of a regular expression tree.
 pub fn suffix_set(regex_tree: &Node) -> HashSet<SetTerminal> {
     let mut set = HashSet::new();
     match regex_tree {
@@ -108,7 +109,9 @@ pub fn suffix_set(regex_tree: &Node) -> HashSet<SetTerminal> {
     set
 }
 
-/// The `factors_set` function returns the set of factors of a regular expression tree.
+/// The `factors_set` function returns the set of [SetTerminal] that are factors of a regular expression tree.
+/// 
+/// Factors in this scenario mean the set of terminals that can be produced by the regular expression.
 pub fn factors_set(regex_tree: &Node) -> HashSet<SetTerminal> {
     let mut set = HashSet::new();
     match regex_tree {

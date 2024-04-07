@@ -30,6 +30,7 @@ use translation::node::*;
 
 type Regex = NFA;
 
+/// Translates a regular expression tree to a NFA. This NFA can then be called to simulate inputs.
 pub fn regex(regex_tree: &Node) -> Regex {
     let prefix_set = &prefix_set(regex_tree);
     let suffix_set = &suffix_set(regex_tree);
@@ -37,8 +38,13 @@ pub fn regex(regex_tree: &Node) -> Regex {
     NFA::set_to_nfa(prefix_set, suffix_set, factors_set)
 }
 
+/// Keeps count of the terminals created. This is used to create unique terminals.
 static TERMINAL_COUNT: AtomicU32 = AtomicU32::new(0);
 
+/// Represents the `concatenation` action in regex. Can concatenate multiple nodes.
+/// 
+/// Regex: ab
+/// Gregex: concatenate!(terminal('a'), terminal('b'))
 #[macro_export]
 macro_rules! concatenate {
     ($($node:expr),+ $(,)?) => {
@@ -51,11 +57,19 @@ macro_rules! concatenate {
     };
 }
 
+/// Represents a `terminal` in regex. This is a single character.
+/// 
+/// Regex: a
+/// Gregex: terminal('a')
 pub fn terminal(symbol: char) -> Node {
     let count = TERMINAL_COUNT.fetch_add(1, Ordering::SeqCst);
     Node::Terminal(symbol, count)
 }
 
+/// Represents the `or`` action in regex. Can 'or' multiple nodes.
+/// 
+/// Regex: a|b
+/// Gregex: or!(terminal('a'), terminal('b'))
 #[macro_export]
 macro_rules! or {
     ($($node:expr),+ $(,)?) => {
@@ -68,6 +82,10 @@ macro_rules! or {
     };
 }
 
+/// Represents the `production` action in regex. This is a single node.
+/// 
+/// Regex: a*
+/// Gregex: production!(terminal('a'))
 #[macro_export]
 macro_rules! production {
     ($child:expr) => {

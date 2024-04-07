@@ -7,13 +7,16 @@ use std::collections::{HashMap, HashSet};
 /// The `NFA` struct represents a non-deterministic finite automaton.
 #[derive(Debug, Default)]
 pub struct NFA {
+    /// Set of all possible states of the NFA.
     states: HashSet<u32>,
+    /// Set of all accepting states. If the NFA ends at any one if these the simulation is succesful.
     accept: HashSet<u32>,
     /// The transition function is a map from a pair of a state and a character to a set of states.
     transition_function: HashMap<(u32, char), HashSet<u32>>,
 }
 
 impl NFA {
+    /// Simulates the NFA with the given input.
     pub fn simulate(&self, input: &str) -> bool {
         let mut current_states = HashSet::new();
         current_states.insert(0);
@@ -29,6 +32,7 @@ impl NFA {
         !current_states.is_disjoint(&self.accept)
     }
 
+    /// Converts the prefix, suffix and factors sets to a NFA.
     pub fn set_to_nfa(
         prefix_set: &HashSet<SetTerminal>,
         suffix_set: &HashSet<SetTerminal>,
