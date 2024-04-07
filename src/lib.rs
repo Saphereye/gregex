@@ -2,10 +2,16 @@
 //!  Here is a short example on how to use this crate
 //!
 //! ```rust
-//! use::gregex::regex;
+//! extern crate gregex;
+//! use gregex::*;
 //!
-//! let regex = regex("(a.b)*");
-//! assert!(regex.simulate("abab"));
+//! fn main() {
+//!     let tree = concatenate!(production!(terminal('a')), terminal('b'), terminal('c'));
+//!     let regex = regex(&tree);
+//!     assert!(regex.simulate("abc"));
+//!     assert!(!regex.simulate("a"));
+//!     assert!(regex.simulate("aaabc"));
+//! }
 //! ```
 //!
 //! The regex function uses the regular expression string to create a NFA that can be used to simulate the regular expression.
@@ -19,32 +25,58 @@ pub mod nfa;
 pub mod translation;
 
 use nfa::*;
-use translation::linearize::linearize;
+use std::sync::atomic::{AtomicU32, Ordering};
 use translation::node::*;
 
 type Regex = NFA;
 
-/// Creates a NFA from a regular expression string.
-///
-/// # Note
-/// Currently the regular expression engine only supports the following operators:
-/// - `.` (Concatenation)
-/// - `*` (Kleene star)
-/// - `|` (Or)
-///
-/// # Example
-/// ```rust
-/// use::gregex::regex;
-///
-/// let regex = regex("(a.b)*");
-/// assert!(regex.simulate("abab"));
-/// ```
-pub fn regex(regex_string: &str) -> Regex {
-    let regex_tree = linearize(regex_string);
-    let prefix_set = &prefix_set(&regex_tree);
-    let suffix_set = &suffix_set(&regex_tree);
-    let factors_set = &factors_set(&regex_tree);
+pub fn regex(regex_tree: &Node) -> Regex {
+    let prefix_set = &prefix_set(regex_tree);
+    let suffix_set = &suffix_set(regex_tree);
+    let factors_set = &factors_set(regex_tree);
     NFA::set_to_nfa(prefix_set, suffix_set, factors_set)
+}
+
+static TERMINAL_COUNT: AtomicU32 = AtomicU32::new(0);
+
+#[macro_export]
+macro_rules! concatenate {
+    ($($node:expr),+ $(,)?) => {
+        {
+            let nodes = vec![$($node),+];
+            nodes.into_iter().reduce(|left, right| {
+                $crate::translation::node::Node::Operation($crate::translation::operator::Operator::Concat, Box::new(left), Some(Box::new(right)))
+            }).expect("Cannot concatenate an empty Vec<Node>")
+        }
+    };
+}
+
+pub fn terminal(symbol: char) -> Node {
+    let count = TERMINAL_COUNT.fetch_add(1, Ordering::SeqCst);
+    Node::Terminal(symbol, count)
+}
+
+#[macro_export]
+macro_rules! or {
+    ($($node:expr),+ $(,)?) => {
+        {
+            let nodes = vec![$($node),+];
+            nodes.into_iter().reduce(|left, right| {
+                $crate::translation::node::Node::Operation($crate::translation::operator::Operator::Or, Box::new(left), Some(Box::new(right)))
+            }).expect("Cannot or an empty Vec<Node>")
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! production {
+    ($child:expr) => {
+        $crate::translation::node::Node::Operation(
+            $crate::translation::operator::Operator::Production,
+            Box::new($child),
+            None,
+        )
+    };
 }
 
 #[cfg(test)]
@@ -53,11 +85,10 @@ mod tests {
 
     #[test]
     fn test_regex() {
-        assert!(regex("a*.b").simulate("b"));
-        assert!(regex("a*.b").simulate("ab"));
-        assert!(regex("a*.b").simulate("aaab"));
-        assert!(regex("a.b").simulate("ab"));
-        assert!(!regex("a.b").simulate("a"));
-        assert!(regex("a|b").simulate("a"));
+        let tree = concatenate!(production!(terminal('a')), terminal('b'), terminal('c'));
+        let regex = regex(&tree);
+        assert!(regex.simulate("abc"));
+        assert!(!regex.simulate("a"));
+        assert!(regex.simulate("aaabc"));
     }
 }

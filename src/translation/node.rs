@@ -8,6 +8,7 @@ use std::collections::HashSet;
 #[derive(Debug, PartialEq, Eq)]
 pub enum Node {
     Operation(Operator, Box<Node>, Option<Box<Node>>),
+    /// `char` represents the character, `u32` represent the unique identifier of the node.
     Terminal(char, u32),
 }
 

@@ -5,11 +5,14 @@ Gregex is a regular expression solver which utilizes Non-deterministic Finite Au
 ## Usage
 
 ```rust
-use::gregex::regex;
-
+extern crate gregex;
+use gregex::*;
 fn main() {
-    let regex = regex("(a.b)*");
-    assert!(regex.simulate("abab"));
+    let tree = concatenate!(production!(terminal('a')), terminal('b'), terminal('c'));
+    let regex = regex(&tree);
+    assert!(regex.simulate("abc"));
+    assert!(!regex.simulate("a"));
+    assert!(regex.simulate("aaabc"));
 }
 ```
 
