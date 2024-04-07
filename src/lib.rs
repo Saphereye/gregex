@@ -19,7 +19,8 @@
 //! The NFA is then later simulated to check if the input string matches the regular expression.
 //!
 //! A brief overview of the pipeline:
-//! [![](https://mermaid.ink/img/pako:eNptkEGLwjAQhf9KmNMK-gd6ENRat6CymGPiITTTGtYkEiesi_jfN2260IXNad77XibhPaHxGqGA9uq_mosKxPYn6Vg6K3HCDh-MUzCuO7PFYrkWtWvNg5FnHwHTdM7RdQ_ZZrxAAXEEmwGUIqcZR_oDtoLH9j9QiUo15MN9QsqB7MSxWo3ONjtZVFPx_la7W6Tx77MB1RntpqIW3Nh4VemptLP3YA4Wg1VGp1KevSOBLmhRQpFGrcKnBOleKacief7tGigoRJxDvGlFWBrVBWV_TdQmLT_kkoeuXz_VYW9H?type=png)](https://mermaid.live/edit#pako:eNptkEGLwjAQhf9KmNMK-gd6ENRat6CymGPiITTTGtYkEiesi_jfN2260IXNad77XibhPaHxGqGA9uq_mosKxPYn6Vg6K3HCDh-MUzCuO7PFYrkWtWvNg5FnHwHTdM7RdQ_ZZrxAAXEEmwGUIqcZR_oDtoLH9j9QiUo15MN9QsqB7MSxWo3ONjtZVFPx_la7W6Tx77MB1RntpqIW3Nh4VemptLP3YA4Wg1VGp1KevSOBLmhRQpFGrcKnBOleKacief7tGigoRJxDvGlFWBrVBWV_TdQmLT_kkoeuXz_VYW9H)
+//! [![](https://github.com/Saphereye/gregex/blob/master/assets/gregex_workflow.excalidraw.svg)
+//! 
 
 pub mod nfa;
 pub mod translation;
