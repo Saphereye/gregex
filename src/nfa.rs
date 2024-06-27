@@ -17,7 +17,7 @@ pub struct NFA {
 
 impl NFA {
     /// Simulates the NFA with the given input.
-    pub fn simulate(&self, input: &str) -> bool {
+    pub fn run(&self, input: &str) -> bool {
         let mut current_states = HashSet::new();
         current_states.insert(0);
         for c in input.chars() {
@@ -101,7 +101,7 @@ mod tests {
             .into_iter()
             .collect(),
         };
-        assert!(nfa.simulate("ab"));
+        assert!(nfa.run("ab"));
     }
 
     #[test]
@@ -110,6 +110,6 @@ mod tests {
         let suffix_set = vec![SetTerminal::SingleElement('b', 2)].into_iter().collect();
         let factors_set = vec![SetTerminal::DoubleElement('a', 1, 'b', 2)].into_iter().collect();
         let nfa = NFA::set_to_nfa(&prefix_set, &suffix_set, &factors_set);
-        assert!(nfa.simulate("ab"));
+        assert!(nfa.run("ab"));
     }
 }

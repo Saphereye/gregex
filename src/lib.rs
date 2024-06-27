@@ -8,9 +8,9 @@
 //! fn main() {
 //!     let tree = dot!(star!('a'), 'b', 'c');
 //!     let regex = regex(&tree);
-//!     assert!(regex.simulate("abc"));
-//!     assert!(!regex.simulate("a"));
-//!     assert!(regex.simulate("aaabc"));
+//!     assert!(regex.run("abc"));
+//!     assert!(!regex.run("a"));
+//!     assert!(regex.run("aaabc"));
 //! }
 //! ```
 //!
@@ -19,7 +19,7 @@
 //! The NFA is then later simulated to check if the input string matches the regular expression.
 //!
 //! A brief overview of the pipeline:
-//! [![](https://github.com/Saphereye/gregex/blob/master/assets/gregex_workflow.excalidraw.svg)
+//! [![](https://github.com/Saphereye/gregex/blob/master/assets/gregex_workflow.excalidraw.svg)]
 //!
 
 pub mod nfa;
@@ -44,8 +44,8 @@ pub static TERMINAL_COUNT: AtomicU32 = AtomicU32::new(0);
 
 /// Represents the `concatenation` action in regex. Can dot multiple nodes.
 ///
-/// Regex: ab
-/// Gregex: dot!('a', 'b')
+/// Regex: `ab`
+/// Gregex: `dot!('a', 'b')`
 #[macro_export]
 macro_rules! dot {
     ($($node:expr),+ $(,)?) => {
@@ -58,10 +58,10 @@ macro_rules! dot {
     };
 }
 
-/// Represents the `or`` action in regex. Can 'or' multiple nodes.
+/// Represents the `or` action in regex. Can 'or' multiple nodes.
 ///
-/// Regex: a|b
-/// Gregex: or!('a', 'b')
+/// Regex: `a|b`
+/// Gregex: `or!('a', 'b')`
 #[macro_export]
 macro_rules! or {
     ($($node:expr),+ $(,)?) => {
@@ -74,6 +74,7 @@ macro_rules! or {
     };
 }
 
+/// Helper function to handle literals and expressions inside the [or], [star] and [dot].
 #[macro_export]
 macro_rules! helper {
     ($node:literal) => {{
@@ -87,10 +88,10 @@ macro_rules! helper {
     };
 }
 
-/// Represents the `star` action in regex. This is a single node.
+/// Represents the `production` action in regex. This is a single node.
 ///
-/// Regex: a*
-/// Gregex: star!('a')
+/// Regex: `a*`
+/// Gregex: `star!('a')`
 #[macro_export]
 macro_rules! star {
     ($child:expr) => {
@@ -110,8 +111,8 @@ mod tests {
     fn test_regex() {
         let tree = dot!(star!('a'), 'b', 'c');
         let regex = regex(&tree);
-        assert!(regex.simulate("abc"));
-        assert!(!regex.simulate("a"));
-        assert!(regex.simulate("aaabc"));
+        assert!(regex.run("abc"));
+        assert!(!regex.run("a"));
+        assert!(regex.run("aaabc"));
     }
 }

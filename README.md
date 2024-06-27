@@ -10,9 +10,9 @@ use gregex::*;
 fn main() {
     let tree = dot!(star!('a'), 'b', 'c');
     let regex = regex(&tree);
-    assert!(regex.simulate("abc"));
-    assert!(!regex.simulate("a"));
-    assert!(regex.simulate("aaabc"));
+    assert!(regex.run("abc"));
+    assert!(!regex.run("a"));
+    assert!(regex.run("aaabc"));
 }
 ```
 
