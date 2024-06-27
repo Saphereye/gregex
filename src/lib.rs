@@ -6,7 +6,7 @@
 //! use gregex::*;
 //!
 //! fn main() {
-//!     let tree = concatenate!(production!(terminal('a')), terminal('b'), terminal('c'));
+//!     let tree = dot!(star!(term('a')), term('b'), term('c'));
 //!     let regex = regex(&tree);
 //!     assert!(regex.simulate("abc"));
 //!     assert!(!regex.simulate("a"));
@@ -42,27 +42,27 @@ pub fn regex(regex_tree: &Node) -> Regex {
 /// Keeps count of the terminals created. This is used to create unique terminals.
 static TERMINAL_COUNT: AtomicU32 = AtomicU32::new(0);
 
-/// Represents the `concatenation` action in regex. Can concatenate multiple nodes.
+/// Represents the `concatenation` action in regex. Can dot multiple nodes.
 /// 
 /// Regex: ab
-/// Gregex: concatenate!(terminal('a'), terminal('b'))
+/// Gregex: dot!(term('a'), term('b'))
 #[macro_export]
-macro_rules! concatenate {
+macro_rules! dot {
     ($($node:expr),+ $(,)?) => {
         {
             let nodes = vec![$($node),+];
             nodes.into_iter().reduce(|left, right| {
                 $crate::translation::node::Node::Operation($crate::translation::operator::Operator::Concat, Box::new(left), Some(Box::new(right)))
-            }).expect("Cannot concatenate an empty Vec<Node>")
+            }).expect("Cannot dot an empty Vec<Node>")
         }
     };
 }
 
-/// Represents a `terminal` in regex. This is a single character.
+/// Represents a `term` in regex. This is a single character.
 /// 
 /// Regex: a
-/// Gregex: terminal('a')
-pub fn terminal(symbol: char) -> Node {
+/// Gregex: term('a')
+pub fn term(symbol: char) -> Node {
     let count = TERMINAL_COUNT.fetch_add(1, Ordering::SeqCst);
     Node::Terminal(symbol, count)
 }
@@ -70,7 +70,7 @@ pub fn terminal(symbol: char) -> Node {
 /// Represents the `or`` action in regex. Can 'or' multiple nodes.
 /// 
 /// Regex: a|b
-/// Gregex: or!(terminal('a'), terminal('b'))
+/// Gregex: or!(term('a'), term('b'))
 #[macro_export]
 macro_rules! or {
     ($($node:expr),+ $(,)?) => {
@@ -83,12 +83,12 @@ macro_rules! or {
     };
 }
 
-/// Represents the `production` action in regex. This is a single node.
+/// Represents the `star` action in regex. This is a single node.
 /// 
 /// Regex: a*
-/// Gregex: production!(terminal('a'))
+/// Gregex: star!(term('a'))
 #[macro_export]
-macro_rules! production {
+macro_rules! star {
     ($child:expr) => {
         $crate::translation::node::Node::Operation(
             $crate::translation::operator::Operator::Production,
@@ -104,7 +104,7 @@ mod tests {
 
     #[test]
     fn test_regex() {
-        let tree = concatenate!(production!(terminal('a')), terminal('b'), terminal('c'));
+        let tree = dot!(star!(term('a')), term('b'), term('c'));
         let regex = regex(&tree);
         assert!(regex.simulate("abc"));
         assert!(!regex.simulate("a"));
