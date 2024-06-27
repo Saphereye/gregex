@@ -8,7 +8,7 @@ Gregex is a regular expression solver which utilizes Non-deterministic Finite Au
 extern crate gregex;
 use gregex::*;
 fn main() {
-    let tree = concatenate!(production!(terminal('a')), terminal('b'), terminal('c'));
+    let tree = dot!(star!('a'), 'b', 'c');
     let regex = regex(&tree);
     assert!(regex.simulate("abc"));
     assert!(!regex.simulate("a"));

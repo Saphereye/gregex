@@ -6,7 +6,7 @@
 //! use gregex::*;
 //!
 //! fn main() {
-//!     let tree = dot!(star!(term('a')), term('b'), term('c'));
+//!     let tree = dot!(star!('a'), 'b', 'c');
 //!     let regex = regex(&tree);
 //!     assert!(regex.simulate("abc"));
 //!     assert!(!regex.simulate("a"));
@@ -20,13 +20,13 @@
 //!
 //! A brief overview of the pipeline:
 //! [![](https://github.com/Saphereye/gregex/blob/master/assets/gregex_workflow.excalidraw.svg)
-//! 
+//!
 
 pub mod nfa;
 pub mod translation;
 
 use nfa::*;
-use std::sync::atomic::{AtomicU32, Ordering};
+use std::sync::atomic::AtomicU32;
 use translation::node::*;
 
 type Regex = NFA;
@@ -40,59 +40,63 @@ pub fn regex(regex_tree: &Node) -> Regex {
 }
 
 /// Keeps count of the terminals created. This is used to create unique terminals.
-static TERMINAL_COUNT: AtomicU32 = AtomicU32::new(0);
+pub static TERMINAL_COUNT: AtomicU32 = AtomicU32::new(0);
 
 /// Represents the `concatenation` action in regex. Can dot multiple nodes.
-/// 
+///
 /// Regex: ab
-/// Gregex: dot!(term('a'), term('b'))
+/// Gregex: dot!('a', 'b')
 #[macro_export]
 macro_rules! dot {
     ($($node:expr),+ $(,)?) => {
         {
-            let nodes = vec![$($node),+];
+            let nodes = vec![$(helper!($node)),+];
             nodes.into_iter().reduce(|left, right| {
                 $crate::translation::node::Node::Operation($crate::translation::operator::Operator::Concat, Box::new(left), Some(Box::new(right)))
-            }).expect("Cannot dot an empty Vec<Node>")
+            }).expect("The input is empty")
         }
     };
 }
 
-/// Represents a `term` in regex. This is a single character.
-/// 
-/// Regex: a
-/// Gregex: term('a')
-pub fn term(symbol: char) -> Node {
-    let count = TERMINAL_COUNT.fetch_add(1, Ordering::SeqCst);
-    Node::Terminal(symbol, count)
-}
-
 /// Represents the `or`` action in regex. Can 'or' multiple nodes.
-/// 
+///
 /// Regex: a|b
-/// Gregex: or!(term('a'), term('b'))
+/// Gregex: or!('a', 'b')
 #[macro_export]
 macro_rules! or {
     ($($node:expr),+ $(,)?) => {
         {
-            let nodes = vec![$($node),+];
+            let nodes = vec![$(helper!($node)),+];
             nodes.into_iter().reduce(|left, right| {
                 $crate::translation::node::Node::Operation($crate::translation::operator::Operator::Or, Box::new(left), Some(Box::new(right)))
-            }).expect("Cannot or an empty Vec<Node>")
+            }).expect("The input is empty")
         }
     };
 }
 
+#[macro_export]
+macro_rules! helper {
+    ($node:literal) => {{
+        {
+            let count = $crate::TERMINAL_COUNT.fetch_add(1, core::sync::atomic::Ordering::SeqCst);
+            $crate::translation::node::Node::Terminal($node, count)
+        }
+    }};
+    ($node:expr) => {
+        $node
+    };
+}
+
 /// Represents the `star` action in regex. This is a single node.
-/// 
+///
 /// Regex: a*
-/// Gregex: star!(term('a'))
+/// Gregex: star!('a')
 #[macro_export]
 macro_rules! star {
     ($child:expr) => {
         $crate::translation::node::Node::Operation(
             $crate::translation::operator::Operator::Production,
-            Box::new($child),
+            Box::new(helper!($child)),
             None,
         )
     };
@@ -104,7 +108,7 @@ mod tests {
 
     #[test]
     fn test_regex() {
-        let tree = dot!(star!(term('a')), term('b'), term('c'));
+        let tree = dot!(star!('a'), 'b', 'c');
         let regex = regex(&tree);
         assert!(regex.simulate("abc"));
         assert!(!regex.simulate("a"));
