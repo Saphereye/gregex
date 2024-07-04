@@ -1,6 +1,6 @@
 [package]
 name = "gregex"
-version = "0.6.0"
+version = "0.7.0"
 edition = "2021"
 authors = ["Saphereye <adarshdas950@gmail.com>"]
 license = "MIT"
@@ -19,4 +19,12 @@ repository = "https://github.com/Saphereye/gregex"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[workspace]
+members = [
+    "gregex-macros",
+    "gregex-logic",
+]
+
 [dependencies]
+gregex-macros = { path = "gregex-macros" }
+gregex-logic = { path = "gregex-logic" }
