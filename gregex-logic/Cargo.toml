@@ -1,6 +1,18 @@
 [package]
 name = "gregex-logic"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
-
-[dependencies]
+authors = ["Saphereye <adarshdas950@gmail.com>"]
+license = "MIT"
+description = "Logic for the gregex crate"
+keywords = ["regex", "nfa", "automata"]
+categories = ["text-processing"]
+documentation = "https://docs.rs/gregex-logic"
+exclude = [
+    ".github/",
+    ".gitignore",
+    "LICENSE",
+    "README.md",
+]
+readme = "README.md"
+repository = "https://github.com/Saphereye/gregex/gregex-logic"
