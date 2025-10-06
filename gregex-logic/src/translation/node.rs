@@ -33,7 +33,12 @@ pub fn nullability_set(regex_tree: &Node) -> HashSet<SetTerminal> {
             Operator::Production => {
                 set.insert(SetTerminal::Epsilon);
             }
-            _ => todo!(),
+            Operator::Plus => {
+                set.insert(SetTerminal::Empty);
+            }
+            Operator::Question => {
+                set.insert(SetTerminal::Epsilon);
+            }
         },
     }
     set
@@ -68,7 +73,14 @@ pub fn prefix_set(regex_tree: &Node) -> HashSet<SetTerminal> {
                 let left_set = prefix_set(left);
                 set = left_set;
             }
-            _ => todo!(),
+            Operator::Plus => {
+                let left_set = prefix_set(left);
+                set = left_set;
+            }
+            Operator::Question => {
+                let left_set = prefix_set(left);
+                set = left_set;
+            }
         },
     }
     set
@@ -103,14 +115,21 @@ pub fn suffix_set(regex_tree: &Node) -> HashSet<SetTerminal> {
                 let left_set = suffix_set(left);
                 set = left_set;
             }
-            _ => todo!(),
+            Operator::Plus => {
+                let left_set = suffix_set(left);
+                set = left_set;
+            }
+            Operator::Question => {
+                let left_set = suffix_set(left);
+                set = left_set;
+            }
         },
     }
     set
 }
 
 /// The `factors_set` function returns the set of [SetTerminal] that are factors of a regular expression tree.
-/// 
+///
 /// Factors in this scenario mean the set of terminals that can be produced by the regular expression.
 pub fn factors_set(regex_tree: &Node) -> HashSet<SetTerminal> {
     let mut set = HashSet::new();
@@ -150,7 +169,22 @@ pub fn factors_set(regex_tree: &Node) -> HashSet<SetTerminal> {
                     }
                 }
             }
-            _ => todo!(),
+            Operator::Plus => {
+                let left_set = factors_set(left);
+                let suffix_set = suffix_set(left);
+                let prefix_set = prefix_set(left);
+                set.extend(left_set);
+
+                for i in suffix_set {
+                    for j in &prefix_set {
+                        set.insert(i.product(j));
+                    }
+                }
+            }
+            Operator::Question => {
+                let left_set = factors_set(left);
+                set.extend(left_set);
+            }
         },
     }
 
@@ -213,6 +247,26 @@ mod tests {
     }
 
     #[test]
+    fn nullability_set_test_plus() {
+        let tree = Node::Operation(Operator::Plus, Box::new(Node::Terminal('a', 1)), None);
+
+        let set = nullability_set(&tree);
+        let mut test_set = HashSet::new();
+        test_set.insert(SetTerminal::Empty);
+        assert_eq!(set, test_set);
+    }
+
+    #[test]
+    fn nullability_set_test_question() {
+        let tree = Node::Operation(Operator::Question, Box::new(Node::Terminal('a', 1)), None);
+
+        let set = nullability_set(&tree);
+        let mut test_set = HashSet::new();
+        test_set.insert(SetTerminal::Epsilon);
+        assert_eq!(set, test_set);
+    }
+
+    #[test]
     fn prefix_set_test_or() {
         let tree = Node::Operation(
             Operator::Or,
@@ -254,6 +308,26 @@ mod tests {
     #[test]
     fn prefix_set_test_terminal() {
         let tree = Node::Terminal('a', 1);
+
+        let set = prefix_set(&tree);
+        let mut test_set = HashSet::new();
+        test_set.insert(SetTerminal::SingleElement('a', 1));
+        assert_eq!(set, test_set);
+    }
+
+    #[test]
+    fn prefix_set_test_plus() {
+        let tree = Node::Operation(Operator::Plus, Box::new(Node::Terminal('a', 1)), None);
+
+        let set = prefix_set(&tree);
+        let mut test_set = HashSet::new();
+        test_set.insert(SetTerminal::SingleElement('a', 1));
+        assert_eq!(set, test_set);
+    }
+
+    #[test]
+    fn prefix_set_test_question() {
+        let tree = Node::Operation(Operator::Question, Box::new(Node::Terminal('a', 1)), None);
 
         let set = prefix_set(&tree);
         let mut test_set = HashSet::new();
@@ -343,6 +417,26 @@ mod tests {
     #[test]
     fn suffix_set_test_terminal() {
         let tree = Node::Terminal('a', 1);
+
+        let set = suffix_set(&tree);
+        let mut test_set = HashSet::new();
+        test_set.insert(SetTerminal::SingleElement('a', 1));
+        assert_eq!(set, test_set);
+    }
+
+    #[test]
+    fn suffix_set_test_plus() {
+        let tree = Node::Operation(Operator::Plus, Box::new(Node::Terminal('a', 1)), None);
+
+        let set = suffix_set(&tree);
+        let mut test_set = HashSet::new();
+        test_set.insert(SetTerminal::SingleElement('a', 1));
+        assert_eq!(set, test_set);
+    }
+
+    #[test]
+    fn suffix_set_test_question() {
+        let tree = Node::Operation(Operator::Question, Box::new(Node::Terminal('a', 1)), None);
 
         let set = suffix_set(&tree);
         let mut test_set = HashSet::new();
@@ -471,6 +565,65 @@ mod tests {
         test_set.insert(SetTerminal::DoubleElement('b', 3, 'a', 2));
         test_set.insert(SetTerminal::DoubleElement('b', 4, 'a', 5));
         test_set.insert(SetTerminal::DoubleElement('a', 5, 'b', 4));
+        assert_eq!(set, test_set);
+    }
+
+    #[test]
+    fn factors_set_test_plus() {
+        let tree = Node::Operation(Operator::Plus, Box::new(Node::Terminal('a', 1)), None);
+
+        let set = factors_set(&tree);
+        let mut test_set = HashSet::new();
+        test_set.insert(SetTerminal::DoubleElement('a', 1, 'a', 1));
+        assert_eq!(set, test_set);
+    }
+
+    #[test]
+    fn factors_set_test_question() {
+        let tree = Node::Operation(Operator::Question, Box::new(Node::Terminal('a', 1)), None);
+
+        let set = factors_set(&tree);
+        let mut test_set = HashSet::new();
+        test_set.insert(SetTerminal::Empty);
+        assert_eq!(set, test_set);
+    }
+
+    #[test]
+    fn factors_set_test_plus_complex() {
+        // Linearized regex: (ab)+
+        let tree = Node::Operation(
+            Operator::Plus,
+            Box::new(Node::Operation(
+                Operator::Concat,
+                Box::new(Node::Terminal('a', 1)),
+                Some(Box::new(Node::Terminal('b', 2))),
+            )),
+            None,
+        );
+
+        let set = factors_set(&tree);
+        let mut test_set = HashSet::new();
+        test_set.insert(SetTerminal::DoubleElement('a', 1, 'b', 2));
+        test_set.insert(SetTerminal::DoubleElement('b', 2, 'a', 1));
+        assert_eq!(set, test_set);
+    }
+
+    #[test]
+    fn factors_set_test_question_complex() {
+        // Linearized regex: (ab)?
+        let tree = Node::Operation(
+            Operator::Question,
+            Box::new(Node::Operation(
+                Operator::Concat,
+                Box::new(Node::Terminal('a', 1)),
+                Some(Box::new(Node::Terminal('b', 2))),
+            )),
+            None,
+        );
+
+        let set = factors_set(&tree);
+        let mut test_set = HashSet::new();
+        test_set.insert(SetTerminal::DoubleElement('a', 1, 'b', 2));
         assert_eq!(set, test_set);
     }
 }

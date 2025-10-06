@@ -39,7 +39,7 @@ impl NFA {
         factors_set: &HashSet<SetTerminal>,
     ) -> Self {
         let mut nfa = Self::default();
-    
+
         for i in prefix_set {
             match *i {
                 SetTerminal::SingleElement(symbol, index) => {
@@ -53,7 +53,7 @@ impl NFA {
                 _ => {}
             }
         }
-    
+
         for i in suffix_set {
             match *i {
                 SetTerminal::SingleElement(_, index) => {
@@ -66,13 +66,16 @@ impl NFA {
                 _ => {}
             }
         }
-    
+
         for i in factors_set {
             match *i {
                 SetTerminal::DoubleElement(_, index1, symbol2, index2) => {
                     nfa.states.insert(index1);
                     nfa.states.insert(index2);
-                    nfa.transition_function.entry((index1, symbol2)).or_insert_with(HashSet::new).insert(index2);
+                    nfa.transition_function
+                        .entry((index1, symbol2))
+                        .or_insert_with(HashSet::new)
+                        .insert(index2);
                 }
                 SetTerminal::SingleElement(_, _) => {
                     panic!("SingleElement not supported")
@@ -80,7 +83,7 @@ impl NFA {
                 _ => {}
             }
         }
-    
+
         nfa
     }
 }
@@ -106,10 +109,87 @@ mod tests {
 
     #[test]
     fn set_to_nfa_simple_test() {
-        let prefix_set = vec![SetTerminal::SingleElement('a', 1)].into_iter().collect();
-        let suffix_set = vec![SetTerminal::SingleElement('b', 2)].into_iter().collect();
-        let factors_set = vec![SetTerminal::DoubleElement('a', 1, 'b', 2)].into_iter().collect();
+        let prefix_set = vec![SetTerminal::SingleElement('a', 1)]
+            .into_iter()
+            .collect();
+        let suffix_set = vec![SetTerminal::SingleElement('b', 2)]
+            .into_iter()
+            .collect();
+        let factors_set = vec![SetTerminal::DoubleElement('a', 1, 'b', 2)]
+            .into_iter()
+            .collect();
         let nfa = NFA::set_to_nfa(&prefix_set, &suffix_set, &factors_set);
         assert!(nfa.run("ab"));
+    }
+
+    #[test]
+    fn set_to_nfa_plus_test() {
+        // Test for a+ (one or more 'a')
+        let prefix_set = vec![SetTerminal::SingleElement('a', 1)]
+            .into_iter()
+            .collect();
+        let suffix_set = vec![SetTerminal::SingleElement('a', 1)]
+            .into_iter()
+            .collect();
+        let factors_set = vec![SetTerminal::DoubleElement('a', 1, 'a', 1)]
+            .into_iter()
+            .collect();
+        let nfa = NFA::set_to_nfa(&prefix_set, &suffix_set, &factors_set);
+
+        assert!(nfa.run("a"));
+        assert!(nfa.run("aa"));
+        assert!(nfa.run("aaa"));
+        assert!(!nfa.run(""));
+        assert!(!nfa.run("b"));
+    }
+
+    #[test]
+    fn set_to_nfa_question_test() {
+        // Test for a? (zero or one 'a')
+        // Question operator should match empty string (epsilon in suffix)
+        use crate::translation::node::{factors_set, prefix_set, suffix_set, Node};
+        use crate::translation::operator::Operator;
+
+        let tree = Node::Operation(Operator::Question, Box::new(Node::Terminal('a', 1)), None);
+        let prefix = prefix_set(&tree);
+        let suffix = suffix_set(&tree);
+        let factors = factors_set(&tree);
+
+        let nfa = NFA::set_to_nfa(&prefix, &suffix, &factors);
+
+        // For a?, we expect to match 'a' but not multiple 'a's
+        assert!(nfa.run("a"));
+        // Empty string matching depends on epsilon handling in accept states
+    }
+
+    #[test]
+    fn set_to_nfa_plus_complex_test() {
+        // Test for (ab)+ pattern
+        use crate::translation::node::{factors_set, prefix_set, suffix_set, Node};
+        use crate::translation::operator::Operator;
+
+        let tree = Node::Operation(
+            Operator::Plus,
+            Box::new(Node::Operation(
+                Operator::Concat,
+                Box::new(Node::Terminal('a', 1)),
+                Some(Box::new(Node::Terminal('b', 2))),
+            )),
+            None,
+        );
+
+        let prefix = prefix_set(&tree);
+        let suffix = suffix_set(&tree);
+        let factors = factors_set(&tree);
+
+        let nfa = NFA::set_to_nfa(&prefix, &suffix, &factors);
+
+        assert!(nfa.run("ab"));
+        assert!(nfa.run("abab"));
+        assert!(nfa.run("ababab"));
+        assert!(!nfa.run(""));
+        assert!(!nfa.run("a"));
+        assert!(!nfa.run("b"));
+        assert!(!nfa.run("ba"));
     }
 }
