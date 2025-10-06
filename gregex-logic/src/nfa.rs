@@ -4,6 +4,60 @@ use crate::translation::setterminal::SetTerminal;
 use core::panic;
 use std::collections::{HashMap, HashSet};
 
+/// Iterator over non-overlapping matches in a text.
+pub struct FindIter<'t> {
+    nfa: &'t NFA,
+    text: &'t str,
+    pos: usize,
+}
+
+impl<'t> Iterator for FindIter<'t> {
+    type Item = (usize, usize);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.pos > self.text.len() {
+            return None;
+        }
+
+        // Try to find a match starting from current position or later
+        for start in self.pos..=self.text.len() {
+            // Try different lengths for a match
+            for end in start..=self.text.len() {
+                if self.nfa.matches_exact(&self.text[start..end]) {
+                    self.pos = end; // Move past this match to avoid overlaps
+                    if self.pos == start {
+                        // Prevent infinite loop on empty matches
+                        self.pos += 1;
+                    }
+                    return Some((start, end));
+                }
+            }
+        }
+        None
+    }
+}
+
+/// Placeholder type for capture groups (not yet implemented).
+#[derive(Debug, PartialEq)]
+pub struct Captures {
+    // Future: will contain captured substrings
+}
+
+/// Placeholder iterator for capture groups (not yet implemented).
+pub struct CapturesIter<'t> {
+    _nfa: &'t NFA,
+    _text: &'t str,
+    _pos: usize,
+}
+
+impl<'t> Iterator for CapturesIter<'t> {
+    type Item = Captures;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        None // Not yet implemented
+    }
+}
+
 /// The `NFA` struct represents a non-deterministic finite automaton.
 #[derive(Debug, Default)]
 pub struct NFA {
@@ -16,8 +70,109 @@ pub struct NFA {
 }
 
 impl NFA {
-    /// Simulates the NFA with the given input.
-    pub fn run(&self, input: &str) -> bool {
+    /// Checks if the pattern matches anywhere in the input text.
+    ///
+    /// This is the primary matching method, similar to Rust's standard regex `is_match`.
+    /// It returns `true` if the pattern is found anywhere in the input string.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// use gregex::*;
+    ///
+    /// let pattern = regex!("abc");
+    /// assert!(pattern.is_match("abc"));
+    /// assert!(pattern.is_match("xabcy"));  // Matches in the middle
+    /// assert!(!pattern.is_match("xyz"));
+    /// ```
+    pub fn is_match(&self, text: &str) -> bool {
+        // Try matching starting from each position in the text
+        for start in 0..=text.len() {
+            // Try different lengths from this starting position
+            for end in start..=text.len() {
+                if self.matches_exact(&text[start..end]) {
+                    return true;
+                }
+            }
+        }
+        false
+    }
+
+    /// Finds the first occurrence of the pattern in the text.
+    ///
+    /// Returns `Some((start, end))` with byte indices if a match is found, or `None` otherwise.
+    /// The returned indices represent the shortest match found.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// use gregex::*;
+    ///
+    /// let pattern = regex!("abc");
+    /// assert_eq!(pattern.find("xabcy"), Some((1, 4)));
+    /// assert_eq!(pattern.find("xyz"), None);
+    /// ```
+    pub fn find(&self, text: &str) -> Option<(usize, usize)> {
+        // Try each starting position
+        for start in 0..=text.len() {
+            // Try to find the shortest match from this position
+            for end in start..=text.len() {
+                if self.matches_exact(&text[start..end]) {
+                    return Some((start, end));
+                }
+            }
+        }
+        None
+    }
+
+    /// Returns an iterator over all non-overlapping matches in the text.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// use gregex::*;
+    ///
+    /// let pattern = regex!("ab");
+    /// let matches: Vec<_> = pattern.find_iter("abxabxab").collect();
+    /// // Returns positions of all "ab" occurrences
+    /// ```
+    pub fn find_iter<'t>(&'t self, text: &'t str) -> FindIter<'t> {
+        FindIter {
+            nfa: self,
+            text,
+            pos: 0,
+        }
+    }
+
+    /// Placeholder for capture group functionality.
+    ///
+    /// **Note**: Capture groups are not yet implemented. This method currently
+    /// returns `None`. The current implementation focuses on matching without
+    /// capturing subgroups.
+    ///
+    /// # Future Enhancement
+    ///
+    /// A future version will support capturing groups with syntax like `(a+)`.
+    pub fn captures(&self, _text: &str) -> Option<Captures> {
+        None // Not yet implemented
+    }
+
+    /// Placeholder for capture group iterator functionality.
+    ///
+    /// **Note**: Capture groups are not yet implemented. This method currently
+    /// returns an empty iterator.
+    pub fn captures_iter<'t>(&'t self, text: &'t str) -> CapturesIter<'t> {
+        CapturesIter {
+            _nfa: self,
+            _text: text,
+            _pos: 0,
+        }
+    }
+
+    /// Internal helper: checks if the pattern matches the entire input string exactly.
+    ///
+    /// This is the core matching logic used by all other methods.
+    fn matches_exact(&self, input: &str) -> bool {
         let mut current_states = HashSet::new();
         current_states.insert(0);
         for c in input.chars() {
@@ -30,6 +185,23 @@ impl NFA {
             current_states = next_states;
         }
         !current_states.is_disjoint(&self.accept)
+    }
+
+    /// Legacy method: checks if the pattern matches the exact input string.
+    ///
+    /// **Deprecated**: Use `is_match()` for substring matching.
+    ///
+    /// This method checks if the entire input string matches the pattern exactly,
+    /// which is equivalent to `matches_exact()`.
+    ///
+    /// # Migration Guide
+    ///
+    /// - Old: `pattern.run("exact")` - matches only if entire string is "exact"
+    /// - New: `pattern.is_match("exact")` - matches if "exact" appears anywhere
+    /// - For exact matching: Use anchors in your pattern or check match bounds
+    #[deprecated(since = "0.8.0", note = "Use `is_match()` for standard regex matching")]
+    pub fn run(&self, input: &str) -> bool {
+        self.matches_exact(input)
     }
 
     /// Converts the prefix, suffix and factors sets to a NFA.

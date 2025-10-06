@@ -29,13 +29,29 @@ use gregex::*;
 
 fn main() {
     // Natural regex syntax - parsed at compile time!
-    let runner = regex!("(a|b)+c");
+    let pattern = regex!("(a|b)+c");
     
-    assert_eq!(runner.run("abc"), true);
-    assert_eq!(runner.run("bbbac"), true);
-    assert_eq!(runner.run("c"), false);
+    // Use standard regex API methods
+    assert!(pattern.is_match("abc"));      // Find pattern anywhere
+    assert!(pattern.is_match("prefix_abc_suffix"));
+    assert_eq!(pattern.find("xabcy"), Some((1, 4)));  // Get match position
 }
 ```
+
+## 🔧 API Methods
+
+Gregex provides a standard regex API similar to Rust's `regex` crate:
+
+| Method | Description | Example |
+|--------|-------------|---------|
+| `is_match(text)` | Check if pattern exists in text | `pattern.is_match("hello")` |
+| `find(text)` | Get first match position | `pattern.find("text")` → `Some((start, end))` |
+| `find_iter(text)` | Iterator over all matches | `pattern.find_iter("text").collect()` |
+| `captures(text)` | Capture groups (not yet implemented) | Returns `None` currently |
+| `captures_iter(text)` | Iterator for captures (not yet implemented) | Empty iterator |
+
+**Note**: The old `run()` method is deprecated. Use `is_match()` instead.
+
 
 ## 📖 Regex Syntax Reference
 
@@ -51,6 +67,16 @@ When using string-based syntax with `regex!("...")`, the following operators are
 | `a?` | Question (zero or one) | `regex!("a?")` | "" or "a" |
 | `(...)` | Grouping for precedence | `regex!("(ab)+")` | "ab", "abab", ... |
 
+### Wildcard Patterns
+
+**Note**: The `.` wildcard (match any character) and `.*` patterns are not currently supported in the parser. However:
+- Use `(a|b|c)*` to match specific character sets with repetition
+- Use alternation `(a|b|c)+` for one-or-more of specific characters  
+- The `is_match()` method finds patterns anywhere in text, so `pattern.is_match()` behaves similarly to `.*pattern.*` in standard regex
+
+**Future Enhancement**: Full wildcard support (`.` and `\w`, `\d`, etc.) is planned for a future version.
+
+
 ## 💡 Usage Examples
 
 ### 1. String-Based Syntax (Recommended)
@@ -60,23 +86,25 @@ The most natural and recommended way to use Gregex:
 ```rust
 use gregex::*;
 
-// Simple patterns
-let email_checker = regex!("a+@b+");
-assert_eq!(email_checker.run("user@domain"), true);
+// Simple patterns with new API
+let pattern = regex!("a+@b+");
+assert!(pattern.is_match("aaa@bbb"));
+assert!(pattern.is_match("prefix_aa@bb_suffix"));
 
 // Complex patterns with operators
 let identifier = regex!("(a|b)(a|b|c)*");
-assert_eq!(identifier.run("abc"), true);
-assert_eq!(identifier.run("bca"), true);
+assert!(identifier.is_match("abc"));
+assert!(identifier.is_match("bca"));
 
-// Multiple operators combined
+// Find match positions
 let pattern = regex!("a+b?c*");
-assert_eq!(pattern.run("aabcc"), true);
-assert_eq!(pattern.run("a"), true);
+if let Some((start, end)) = pattern.find("xyzaabccxyz") {
+    println!("Found match from {} to {}", start, end);
+}
 
 // Nested grouping
 let nested = regex!("((a|b)+c)*");
-assert_eq!(nested.run("acbc"), true);
+assert!(nested.is_match("acbc"));
 ```
 
 ### 2. Operator Macros (Alternative API)
@@ -87,15 +115,15 @@ Use explicit operator macros for more control:
 use gregex::*;
 
 // Concatenation with strings
-let runner = regex!(dot!("hello", " ", "world"));
-assert_eq!(runner.run("hello world"), true);
+let pattern = regex!(dot!("hello", " ", "world"));
+assert!(pattern.is_match("hello world"));
 
 // Operators work with strings too
-let runner = regex!(star!("ab"));
-assert_eq!(runner.run("ababab"), true);
+let pattern = regex!(star!("ab"));
+assert!(pattern.is_match("ababab"));
 
-let runner = regex!(plus!("hello"));
-assert_eq!(runner.run("hellohello"), true);
+let pattern = regex!(plus!("hello"));
+assert!(pattern.is_match("hellohello"));
 ```
 
 ### 3. Combining Operators
@@ -106,12 +134,17 @@ Both string syntax and macros can be mixed and nested:
 use gregex::*;
 
 // Nested macros
-let runner = regex!(dot!(plus!('a'), question!('b')));
-assert_eq!(runner.run("aab"), true);
+let pattern = regex!(dot!(plus!('a'), question!('b')));
+assert!(pattern.is_match("aab"));
 
 // String syntax is usually clearer for the same pattern
-let runner = regex!("a+b?");
-assert_eq!(runner.run("aab"), true);
+let pattern = regex!("a+b?");
+assert!(pattern.is_match("aab"));
+
+// Find all matches
+for (start, end) in pattern.find_iter("xaabxaaabx") {
+    println!("Match at {}-{}", start, end);
+}
 ```
 
 ## 📦 Examples
@@ -119,6 +152,9 @@ assert_eq!(runner.run("aab"), true);
 Run the included examples to see gregex in action:
 
 ```bash
+# New API demonstration (is_match, find, find_iter)
+cargo run --example new_api_demo
+
 # Basic concatenation
 cargo run --example dot
 
