@@ -37,8 +37,14 @@ impl NFA {
         prefix_set: &HashSet<SetTerminal>,
         suffix_set: &HashSet<SetTerminal>,
         factors_set: &HashSet<SetTerminal>,
+        nullability_set: &HashSet<SetTerminal>,
     ) -> Self {
         let mut nfa = Self::default();
+
+        // If the regex is nullable (accepts empty string), add initial state to accept states
+        if nullability_set.contains(&SetTerminal::Epsilon) {
+            nfa.accept.insert(0);
+        }
 
         for i in prefix_set {
             match *i {
@@ -109,6 +115,7 @@ mod tests {
 
     #[test]
     fn set_to_nfa_simple_test() {
+        use crate::translation::setterminal::SetTerminal;
         let prefix_set = vec![SetTerminal::SingleElement('a', 1)]
             .into_iter()
             .collect();
@@ -118,13 +125,15 @@ mod tests {
         let factors_set = vec![SetTerminal::DoubleElement('a', 1, 'b', 2)]
             .into_iter()
             .collect();
-        let nfa = NFA::set_to_nfa(&prefix_set, &suffix_set, &factors_set);
+        let nullability_set = vec![SetTerminal::Empty].into_iter().collect();
+        let nfa = NFA::set_to_nfa(&prefix_set, &suffix_set, &factors_set, &nullability_set);
         assert!(nfa.run("ab"));
     }
 
     #[test]
     fn set_to_nfa_plus_test() {
         // Test for a+ (one or more 'a')
+        use crate::translation::setterminal::SetTerminal;
         let prefix_set = vec![SetTerminal::SingleElement('a', 1)]
             .into_iter()
             .collect();
@@ -134,7 +143,8 @@ mod tests {
         let factors_set = vec![SetTerminal::DoubleElement('a', 1, 'a', 1)]
             .into_iter()
             .collect();
-        let nfa = NFA::set_to_nfa(&prefix_set, &suffix_set, &factors_set);
+        let nullability_set = vec![SetTerminal::Empty].into_iter().collect();
+        let nfa = NFA::set_to_nfa(&prefix_set, &suffix_set, &factors_set, &nullability_set);
 
         assert!(nfa.run("a"));
         assert!(nfa.run("aa"));
@@ -147,25 +157,31 @@ mod tests {
     fn set_to_nfa_question_test() {
         // Test for a? (zero or one 'a')
         // Question operator should match empty string (epsilon in suffix)
-        use crate::translation::node::{factors_set, prefix_set, suffix_set, Node};
+        use crate::translation::node::{
+            factors_set, nullability_set, prefix_set, suffix_set, Node,
+        };
         use crate::translation::operator::Operator;
 
         let tree = Node::Operation(Operator::Question, Box::new(Node::Terminal('a', 1)), None);
         let prefix = prefix_set(&tree);
         let suffix = suffix_set(&tree);
         let factors = factors_set(&tree);
+        let nullability = nullability_set(&tree);
 
-        let nfa = NFA::set_to_nfa(&prefix, &suffix, &factors);
+        let nfa = NFA::set_to_nfa(&prefix, &suffix, &factors, &nullability);
 
-        // For a?, we expect to match 'a' but not multiple 'a's
+        // For a?, we expect to match 'a' and empty string
         assert!(nfa.run("a"));
-        // Empty string matching depends on epsilon handling in accept states
+        assert!(nfa.run(""));
+        assert!(!nfa.run("aa"));
     }
 
     #[test]
     fn set_to_nfa_plus_complex_test() {
         // Test for (ab)+ pattern
-        use crate::translation::node::{factors_set, prefix_set, suffix_set, Node};
+        use crate::translation::node::{
+            factors_set, nullability_set, prefix_set, suffix_set, Node,
+        };
         use crate::translation::operator::Operator;
 
         let tree = Node::Operation(
@@ -181,8 +197,9 @@ mod tests {
         let prefix = prefix_set(&tree);
         let suffix = suffix_set(&tree);
         let factors = factors_set(&tree);
+        let nullability = nullability_set(&tree);
 
-        let nfa = NFA::set_to_nfa(&prefix, &suffix, &factors);
+        let nfa = NFA::set_to_nfa(&prefix, &suffix, &factors, &nullability);
 
         assert!(nfa.run("ab"));
         assert!(nfa.run("abab"));

@@ -136,6 +136,84 @@ pub fn star(input: TokenStream) -> TokenStream {
 }
 
 #[proc_macro]
+pub fn plus(input: TokenStream) -> TokenStream {
+    let expr = parse_macro_input!(input as Expr);
+
+    let node = match expr {
+        Expr::Macro(ExprMacro { mac, .. }) => {
+            // Handle procedural macro
+            quote! { #mac }
+        }
+        Expr::Lit(ExprLit { lit, .. }) => match lit {
+            Lit::Char(c) => {
+                let count =
+                    gregex_logic::TERMINAL_COUNT.fetch_add(1, core::sync::atomic::Ordering::SeqCst);
+                quote! {
+                    gregex_logic::translation::node::Node::Terminal(#c, #count)
+                }
+            }
+            _ => panic!("Unsupported literal type"),
+        },
+        _ => panic!("Unsupported input type"),
+    };
+
+    // Generate the code for the plus operation
+    let operation = quote! {
+        gregex_logic::translation::node::Node::Operation(
+            gregex_logic::translation::operator::Operator::Plus,
+            Box::new(#node),
+            None
+        )
+    };
+
+    // Generate the final token stream
+    let gen = quote! {
+        #operation
+    };
+
+    gen.into()
+}
+
+#[proc_macro]
+pub fn question(input: TokenStream) -> TokenStream {
+    let expr = parse_macro_input!(input as Expr);
+
+    let node = match expr {
+        Expr::Macro(ExprMacro { mac, .. }) => {
+            // Handle procedural macro
+            quote! { #mac }
+        }
+        Expr::Lit(ExprLit { lit, .. }) => match lit {
+            Lit::Char(c) => {
+                let count =
+                    gregex_logic::TERMINAL_COUNT.fetch_add(1, core::sync::atomic::Ordering::SeqCst);
+                quote! {
+                    gregex_logic::translation::node::Node::Terminal(#c, #count)
+                }
+            }
+            _ => panic!("Unsupported literal type"),
+        },
+        _ => panic!("Unsupported input type"),
+    };
+
+    // Generate the code for the question operation
+    let operation = quote! {
+        gregex_logic::translation::node::Node::Operation(
+            gregex_logic::translation::operator::Operator::Question,
+            Box::new(#node),
+            None
+        )
+    };
+
+    // Generate the final token stream
+    let gen = quote! {
+        #operation
+    };
+
+    gen.into()
+}
+
+#[proc_macro]
 pub fn regex(input: TokenStream) -> TokenStream {
     let expr = parse_macro_input!(input as Expr);
 
@@ -165,7 +243,8 @@ pub fn regex(input: TokenStream) -> TokenStream {
             let prefix_set = gregex_logic::translation::node::prefix_set(&regex_tree);
             let suffix_set = gregex_logic::translation::node::suffix_set(&regex_tree);
             let factors_set = gregex_logic::translation::node::factors_set(&regex_tree);
-            gregex_logic::nfa::NFA::set_to_nfa(&prefix_set, &suffix_set, &factors_set)
+            let nullability_set = gregex_logic::translation::node::nullability_set(&regex_tree);
+            gregex_logic::nfa::NFA::set_to_nfa(&prefix_set, &suffix_set, &factors_set, &nullability_set)
         }
     };
 
