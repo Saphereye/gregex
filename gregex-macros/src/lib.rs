@@ -6,7 +6,15 @@ use proc_macro::TokenStream;
 use quote::quote;
 use syn::{parse_macro_input, Expr, ExprLit, ExprMacro, Lit};
 
-/// Simple regex parser using Pratt parsing
+/// Internal regex parser module using Pratt parsing technique.
+///
+/// This module implements a recursive descent parser with operator precedence
+/// for parsing regex syntax strings at compile time. It supports:
+/// - Literals (a, b, c, ...)
+/// - Postfix operators (*, +, ?)
+/// - Infix operator (|)
+/// - Grouping with parentheses ()
+/// - Implicit concatenation
 mod regex_parser {
     use quote::quote;
 
@@ -186,7 +194,22 @@ mod regex_parser {
     }
 }
 
-/// Helper function to convert a literal (char or string) to a Node tree
+/// Helper function to convert a literal (char or string) into a Node tree.
+///
+/// This function handles both single character literals and string literals,
+/// automatically expanding strings into concatenated terminal nodes.
+///
+/// # Arguments
+///
+/// * `lit` - A reference to a `Lit` (literal) from the syn crate
+///
+/// # Returns
+///
+/// A `TokenStream` representing the generated Node structure
+///
+/// # Panics
+///
+/// Panics if the literal is not a `Char` or `Str`, or if the string is empty.
 fn lit_to_node(lit: &Lit) -> proc_macro2::TokenStream {
     match lit {
         Lit::Char(c) => {
@@ -229,6 +252,10 @@ fn lit_to_node(lit: &Lit) -> proc_macro2::TokenStream {
     }
 }
 
+/// Creates a concatenation (sequence) pattern from the given expressions.
+///
+/// Accepts character literals, string literals, and nested macro expressions.
+/// String literals are automatically expanded into sequences.
 #[proc_macro]
 pub fn dot(input: TokenStream) -> TokenStream {
     let inputs = parse_macro_input!(input with syn::punctuated::Punctuated::<Expr, syn::Token![,]>::parse_terminated);
@@ -265,6 +292,10 @@ pub fn dot(input: TokenStream) -> TokenStream {
     gen.into()
 }
 
+/// Creates an alternation (OR) pattern from the given expressions.
+///
+/// Matches if any one of the given expressions matches.
+/// Accepts character literals, string literals, and nested macro expressions.
 #[proc_macro]
 pub fn or(input: TokenStream) -> TokenStream {
     let inputs = parse_macro_input!(input with syn::punctuated::Punctuated::<Expr, syn::Token![,]>::parse_terminated);
@@ -301,6 +332,10 @@ pub fn or(input: TokenStream) -> TokenStream {
     gen.into()
 }
 
+/// Creates a Kleene star (zero or more) pattern for the given expression.
+///
+/// Matches zero or more repetitions of the input.
+/// Accepts character literals, string literals, and nested macro expressions.
 #[proc_macro]
 pub fn star(input: TokenStream) -> TokenStream {
     let expr = parse_macro_input!(input as Expr);
@@ -331,6 +366,10 @@ pub fn star(input: TokenStream) -> TokenStream {
     gen.into()
 }
 
+/// Creates a plus (one or more) pattern for the given expression.
+///
+/// Matches one or more repetitions of the input.
+/// Accepts character literals, string literals, and nested macro expressions.
 #[proc_macro]
 pub fn plus(input: TokenStream) -> TokenStream {
     let expr = parse_macro_input!(input as Expr);
@@ -361,6 +400,10 @@ pub fn plus(input: TokenStream) -> TokenStream {
     gen.into()
 }
 
+/// Creates a question (zero or one) pattern for the given expression.
+///
+/// Matches zero or one occurrence of the input.
+/// Accepts character literals, string literals, and nested macro expressions.
 #[proc_macro]
 pub fn question(input: TokenStream) -> TokenStream {
     let expr = parse_macro_input!(input as Expr);
@@ -391,6 +434,14 @@ pub fn question(input: TokenStream) -> TokenStream {
     gen.into()
 }
 
+/// Main regex macro that builds an NFA from a pattern.
+///
+/// Supports three modes:
+/// 1. String parsing (recommended): Parse regex syntax strings directly like `regex!("(a|b)+")`
+/// 2. Nested macros: Use operator macros like `regex!(dot!(...))`
+/// 3. Character literals: Simple single-character patterns like `regex!('a')`
+///
+/// String syntax supports: literals, `ab` (concat), `a|b` (or), `a*` (star), `a+` (plus), `a?` (question), `(...)` (grouping)
 #[proc_macro]
 pub fn regex(input: TokenStream) -> TokenStream {
     let expr = parse_macro_input!(input as Expr);

@@ -1,10 +1,10 @@
 [package]
 name = "gregex-logic"
-version = "0.1.1"
+version = "0.2.0"
 edition = "2021"
 authors = ["Saphereye <adarshdas950@gmail.com>"]
 license = "MIT"
-description = "Logic for the gregex crate"
+description = "Logic for the gregex crate with Plus and Question operator support"
 keywords = ["regex", "nfa", "automata"]
 categories = ["text-processing"]
 documentation = "https://docs.rs/gregex-logic"

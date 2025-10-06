@@ -2,170 +2,119 @@
 
 ![](https://github.com/Saphereye/gregex/raw/master/assets/gregex_workflow.excalidraw.svg)
 
-Gregex is a regular expression solver which utilizes Non-deterministic Finite Automata (NFA) to simulate the input strings using Glushkov's construction algorithm.
+Gregex is a powerful regular expression library that compiles regex patterns to Non-deterministic Finite Automata (NFA) at compile-time using Glushkov's construction algorithm. Write regex patterns as strings and let Rust's procedural macros do the rest!
 
-## Features
+## ✨ Features
 
-- **NFA-based matching**: Uses Glushkov's construction for efficient regex matching
-- **Macro-based API**: Intuitive macro interface for building regex patterns
-- **String literal support**: All operator macros support string literals for multi-character patterns
-- **Regex string parsing**: Parse regex strings directly with `regex!("(a*)+b")` syntax
-- **Multiple operators**: Support for concatenation, alternation, repetition (Kleene star, plus, question)
-- **Type-safe**: Compile-time regex construction with Rust's procedural macros
+- 🎯 **String-based regex parsing**: Write natural regex syntax like `regex!("(a|b)+")`
+- ⚡ **Compile-time construction**: Zero runtime regex parsing overhead
+- 🔒 **Type-safe**: Leverages Rust's procedural macros for safety
+- 🧩 **NFA-based matching**: Uses Glushkov's construction for efficient matching
+- 📦 **Multiple API styles**: String parsing, operator macros, or character literals
+- 🎨 **Rich operator support**: `*`, `+`, `?`, `|`, concatenation, and grouping
 
-## Installation
+## 🚀 Quick Start
 
 Add gregex to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-gregex = "0.7.2"
+gregex = "0.8.0"
 ```
 
-## Supported Operators
-
-| Operator | Macro | Description | Example | Matches |
-|----------|-------|-------------|---------|---------|
-| Concatenation | `dot!(...)` | Matches sequences | `dot!('a', 'b')` | "ab" |
-| Alternation | `or!(...)` | Matches alternatives | `or!('a', 'b')` | "a" or "b" |
-| Kleene Star | `star!(...)` | Zero or more | `star!('a')` | "", "a", "aa", ... |
-| Plus | `plus!(...)` | One or more | `plus!('a')` | "a", "aa", "aaa", ... |
-| Question | `question!(...)` | Zero or one | `question!('a')` | "" or "a" |
-
-## Usage
-
-### Basic Example
+### Simple Example (Recommended: String Syntax)
 
 ```rust
 use gregex::*;
 
 fn main() {
-    // Match the pattern "ab"
-    let runner = regex!(dot!('a', 'b'));
-    assert_eq!(runner.run("ab"), true);
-    assert_eq!(runner.run("ba"), false);
+    // Natural regex syntax - parsed at compile time!
+    let runner = regex!("(a|b)+c");
+    
+    assert_eq!(runner.run("abc"), true);
+    assert_eq!(runner.run("bbbac"), true);
+    assert_eq!(runner.run("c"), false);
 }
 ```
 
-### String Literal Support
+## 📖 Regex Syntax Reference
 
-All operator macros support string literals for convenient multi-character patterns:
+When using string-based syntax with `regex!("...")`, the following operators are supported:
 
-```rust
-use gregex::*;
+| Syntax | Description | Example | Matches |
+|--------|-------------|---------|---------|
+| `a`, `b`, `c` | Literal characters | `regex!("abc")` | "abc" |
+| `ab` | Concatenation (implicit) | `regex!("hello")` | "hello" |
+| `a\|b` | Alternation (OR) | `regex!("a\|b")` | "a" or "b" |
+| `a*` | Kleene star (zero or more) | `regex!("a*")` | "", "a", "aa", ... |
+| `a+` | Plus (one or more) | `regex!("a+")` | "a", "aa", "aaa", ... |
+| `a?` | Question (zero or one) | `regex!("a?")` | "" or "a" |
+| `(...)` | Grouping for precedence | `regex!("(ab)+")` | "ab", "abab", ... |
 
-// Concatenate a string
-let runner = regex!(dot!("hello", " ", "world"));
-assert_eq!(runner.run("hello world"), true);
+## 💡 Usage Examples
 
-// Star on a string
-let runner = regex!(star!("ab"));
-assert_eq!(runner.run("ababab"), true);
+### 1. String-Based Syntax (Recommended)
 
-// Plus on a string  
-let runner = regex!(plus!("hello"));
-assert_eq!(runner.run("hellohello"), true);
-```
-
-### Regex String Parsing
-
-Parse regex strings directly with the `regex!` macro using a simple Pratt parser:
+The most natural and recommended way to use Gregex:
 
 ```rust
 use gregex::*;
 
 // Simple patterns
-let runner = regex!("abc");
-assert_eq!(runner.run("abc"), true);
+let email_checker = regex!("a+@b+");
+assert_eq!(email_checker.run("user@domain"), true);
 
-// With operators
-let runner = regex!("a+b*");
-assert_eq!(runner.run("aabbb"), true);
+// Complex patterns with operators
+let identifier = regex!("(a|b)(a|b|c)*");
+assert_eq!(identifier.run("abc"), true);
+assert_eq!(identifier.run("bca"), true);
 
-// Complex patterns with grouping
-let runner = regex!("(a|b)+");
-assert_eq!(runner.run("abab"), true);
+// Multiple operators combined
+let pattern = regex!("a+b?c*");
+assert_eq!(pattern.run("aabcc"), true);
+assert_eq!(pattern.run("a"), true);
 
-// Nested operators
-let runner = regex!("(a*)+b");
-assert_eq!(runner.run("aaab"), true);
+// Nested grouping
+let nested = regex!("((a|b)+c)*");
+assert_eq!(nested.run("acbc"), true);
 ```
 
-**Supported regex syntax:**
-- Literals: `a`, `b`, `c`, ...
-- Concatenation: `ab` (implicit)
-- Alternation: `a|b`
-- Kleene star: `a*` (zero or more)
-- Plus: `a+` (one or more)
-- Question: `a?` (zero or one)
-- Grouping: `(ab)*`
+### 2. Operator Macros (Alternative API)
 
-
-### Operators
-
-#### Concatenation (`dot!`)
+Use explicit operator macros for more control:
 
 ```rust
-let runner = regex!(dot!('a', 'b', 'c'));
-assert_eq!(runner.run("abc"), true);
+use gregex::*;
+
+// Concatenation with strings
+let runner = regex!(dot!("hello", " ", "world"));
+assert_eq!(runner.run("hello world"), true);
+
+// Operators work with strings too
+let runner = regex!(star!("ab"));
+assert_eq!(runner.run("ababab"), true);
+
+let runner = regex!(plus!("hello"));
+assert_eq!(runner.run("hellohello"), true);
 ```
 
-#### Alternation (`or!`)
+### 3. Combining Operators
+
+Both string syntax and macros can be mixed and nested:
 
 ```rust
-let runner = regex!(or!('a', 'b', 'c'));
-assert_eq!(runner.run("a"), true);
-assert_eq!(runner.run("b"), true);
-assert_eq!(runner.run("ab"), false);
-```
+use gregex::*;
 
-#### Kleene Star (`star!`) - Zero or More
-
-```rust
-let runner = regex!(star!('a'));
-assert_eq!(runner.run(""), true);
-assert_eq!(runner.run("a"), true);
-assert_eq!(runner.run("aaa"), true);
-```
-
-#### Plus (`plus!`) - One or More
-
-```rust
-let runner = regex!(plus!('a'));
-assert_eq!(runner.run("a"), true);
-assert_eq!(runner.run("aa"), true);
-assert_eq!(runner.run(""), false);  // Requires at least one
-```
-
-#### Question (`question!`) - Zero or One
-
-```rust
-let runner = regex!(question!('a'));
-assert_eq!(runner.run(""), true);
-assert_eq!(runner.run("a"), true);
-assert_eq!(runner.run("aa"), false);  // At most one
-```
-
-### Complex Patterns
-
-Operators can be nested and combined:
-
-```rust
-// Pattern: a+b? (one or more 'a' followed by optional 'b')
+// Nested macros
 let runner = regex!(dot!(plus!('a'), question!('b')));
-assert_eq!(runner.run("a"), true);
-assert_eq!(runner.run("ab"), true);
 assert_eq!(runner.run("aab"), true);
-assert_eq!(runner.run("abb"), false);
 
-// Pattern: (a|b)* (zero or more of 'a' or 'b')
-let runner = regex!(star!(or!('a', 'b')));
-assert_eq!(runner.run(""), true);
-assert_eq!(runner.run("ab"), true);
-assert_eq!(runner.run("baba"), true);
+// String syntax is usually clearer for the same pattern
+let runner = regex!("a+b?");
+assert_eq!(runner.run("aab"), true);
 ```
 
-## Examples
+## 📦 Examples
 
 Run the included examples to see gregex in action:
 
