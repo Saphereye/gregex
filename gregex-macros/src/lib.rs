@@ -6,6 +6,229 @@ use proc_macro::TokenStream;
 use quote::quote;
 use syn::{parse_macro_input, Expr, ExprLit, ExprMacro, Lit};
 
+/// Simple regex parser using Pratt parsing
+mod regex_parser {
+    use quote::quote;
+
+    #[derive(Debug, Clone, PartialEq)]
+    enum Token {
+        Char(char),
+        Star,
+        Plus,
+        Question,
+        Pipe,
+        LParen,
+        RParen,
+        Eof,
+    }
+
+    struct Lexer {
+        chars: Vec<char>,
+        pos: usize,
+    }
+
+    impl Lexer {
+        fn new(input: &str) -> Self {
+            Lexer {
+                chars: input.chars().collect(),
+                pos: 0,
+            }
+        }
+
+        fn next(&mut self) -> Token {
+            if self.pos >= self.chars.len() {
+                return Token::Eof;
+            }
+
+            let ch = self.chars[self.pos];
+            self.pos += 1;
+
+            match ch {
+                '*' => Token::Star,
+                '+' => Token::Plus,
+                '?' => Token::Question,
+                '|' => Token::Pipe,
+                '(' => Token::LParen,
+                ')' => Token::RParen,
+                c => Token::Char(c),
+            }
+        }
+
+        fn peek(&self) -> Token {
+            if self.pos >= self.chars.len() {
+                return Token::Eof;
+            }
+
+            let ch = self.chars[self.pos];
+            match ch {
+                '*' => Token::Star,
+                '+' => Token::Plus,
+                '?' => Token::Question,
+                '|' => Token::Pipe,
+                '(' => Token::LParen,
+                ')' => Token::RParen,
+                c => Token::Char(c),
+            }
+        }
+    }
+
+    pub fn parse(input: &str) -> proc_macro2::TokenStream {
+        let mut lexer = Lexer::new(input);
+        parse_or(&mut lexer)
+    }
+
+    fn parse_or(lexer: &mut Lexer) -> proc_macro2::TokenStream {
+        let mut left = parse_concat(lexer);
+
+        while lexer.peek() == Token::Pipe {
+            lexer.next(); // consume '|'
+            let right = parse_concat(lexer);
+            left = quote! {
+                gregex_logic::translation::node::Node::Operation(
+                    gregex_logic::translation::operator::Operator::Or,
+                    Box::new(#left),
+                    Some(Box::new(#right))
+                )
+            };
+        }
+
+        left
+    }
+
+    fn parse_concat(lexer: &mut Lexer) -> proc_macro2::TokenStream {
+        let mut nodes = Vec::new();
+
+        loop {
+            match lexer.peek() {
+                Token::Eof | Token::RParen | Token::Pipe => break,
+                _ => nodes.push(parse_postfix(lexer)),
+            }
+        }
+
+        if nodes.is_empty() {
+            panic!("Empty expression");
+        }
+
+        let mut result = nodes[0].clone();
+        for node in nodes.iter().skip(1) {
+            result = quote! {
+                gregex_logic::translation::node::Node::Operation(
+                    gregex_logic::translation::operator::Operator::Concat,
+                    Box::new(#result),
+                    Some(Box::new(#node))
+                )
+            };
+        }
+
+        result
+    }
+
+    fn parse_postfix(lexer: &mut Lexer) -> proc_macro2::TokenStream {
+        let mut node = parse_atom(lexer);
+
+        loop {
+            match lexer.peek() {
+                Token::Star => {
+                    lexer.next();
+                    node = quote! {
+                        gregex_logic::translation::node::Node::Operation(
+                            gregex_logic::translation::operator::Operator::Production,
+                            Box::new(#node),
+                            None
+                        )
+                    };
+                }
+                Token::Plus => {
+                    lexer.next();
+                    node = quote! {
+                        gregex_logic::translation::node::Node::Operation(
+                            gregex_logic::translation::operator::Operator::Plus,
+                            Box::new(#node),
+                            None
+                        )
+                    };
+                }
+                Token::Question => {
+                    lexer.next();
+                    node = quote! {
+                        gregex_logic::translation::node::Node::Operation(
+                            gregex_logic::translation::operator::Operator::Question,
+                            Box::new(#node),
+                            None
+                        )
+                    };
+                }
+                _ => break,
+            }
+        }
+
+        node
+    }
+
+    fn parse_atom(lexer: &mut Lexer) -> proc_macro2::TokenStream {
+        match lexer.next() {
+            Token::Char(c) => {
+                let count =
+                    gregex_logic::TERMINAL_COUNT.fetch_add(1, core::sync::atomic::Ordering::SeqCst);
+                quote! {
+                    gregex_logic::translation::node::Node::Terminal(#c, #count)
+                }
+            }
+            Token::LParen => {
+                let node = parse_or(lexer);
+                if lexer.next() != Token::RParen {
+                    panic!("Expected closing parenthesis");
+                }
+                node
+            }
+            _ => panic!("Unexpected token in atom"),
+        }
+    }
+}
+
+/// Helper function to convert a literal (char or string) to a Node tree
+fn lit_to_node(lit: &Lit) -> proc_macro2::TokenStream {
+    match lit {
+        Lit::Char(c) => {
+            let count =
+                gregex_logic::TERMINAL_COUNT.fetch_add(1, core::sync::atomic::Ordering::SeqCst);
+            quote! {
+                gregex_logic::translation::node::Node::Terminal(#c, #count)
+            }
+        }
+        Lit::Str(s) => {
+            let chars: Vec<char> = s.value().chars().collect();
+            if chars.is_empty() {
+                panic!("Empty strings are not supported");
+            }
+            let nodes: Vec<_> = chars
+                .iter()
+                .map(|c| {
+                    let count = gregex_logic::TERMINAL_COUNT
+                        .fetch_add(1, core::sync::atomic::Ordering::SeqCst);
+                    quote! {
+                        gregex_logic::translation::node::Node::Terminal(#c, #count)
+                    }
+                })
+                .collect();
+
+            // Chain nodes with Concat operators
+            let mut result = nodes[0].clone();
+            for node in nodes.iter().skip(1) {
+                result = quote! {
+                    gregex_logic::translation::node::Node::Operation(
+                        gregex_logic::translation::operator::Operator::Concat,
+                        Box::new(#result),
+                        Some(Box::new(#node))
+                    )
+                };
+            }
+            result
+        }
+        _ => panic!("Unsupported literal type"),
+    }
+}
+
 #[proc_macro]
 pub fn dot(input: TokenStream) -> TokenStream {
     let inputs = parse_macro_input!(input with syn::punctuated::Punctuated::<Expr, syn::Token![,]>::parse_terminated);
@@ -16,16 +239,7 @@ pub fn dot(input: TokenStream) -> TokenStream {
                 // Handle procedural macro
                 quote! { #mac }
             }
-            Expr::Lit(ExprLit { lit, .. }) => match lit {
-                Lit::Char(c) => {
-                    let count = gregex_logic::TERMINAL_COUNT
-                        .fetch_add(1, core::sync::atomic::Ordering::SeqCst);
-                    quote! {
-                        gregex_logic::translation::node::Node::Terminal(#c, #count)
-                    }
-                }
-                _ => panic!("Unsupported literal type"),
-            },
+            Expr::Lit(ExprLit { lit, .. }) => lit_to_node(&lit),
             _ => panic!("Unsupported input type"),
         }
     });
@@ -61,16 +275,7 @@ pub fn or(input: TokenStream) -> TokenStream {
                 // Handle procedural macro
                 quote! { #mac }
             }
-            Expr::Lit(ExprLit { lit, .. }) => match lit {
-                Lit::Char(c) => {
-                    let count = gregex_logic::TERMINAL_COUNT
-                        .fetch_add(1, core::sync::atomic::Ordering::SeqCst);
-                    quote! {
-                        gregex_logic::translation::node::Node::Terminal(#c, #count)
-                    }
-                }
-                _ => panic!("Unsupported literal type"),
-            },
+            Expr::Lit(ExprLit { lit, .. }) => lit_to_node(&lit),
             _ => panic!("Unsupported input type"),
         }
     });
@@ -105,16 +310,7 @@ pub fn star(input: TokenStream) -> TokenStream {
             // Handle procedural macro
             quote! { #mac }
         }
-        Expr::Lit(ExprLit { lit, .. }) => match lit {
-            Lit::Char(c) => {
-                let count =
-                    gregex_logic::TERMINAL_COUNT.fetch_add(1, core::sync::atomic::Ordering::SeqCst);
-                quote! {
-                    gregex_logic::translation::node::Node::Terminal(#c, #count)
-                }
-            }
-            _ => panic!("Unsupported literal type"),
-        },
+        Expr::Lit(ExprLit { lit, .. }) => lit_to_node(&lit),
         _ => panic!("Unsupported input type"),
     };
 
@@ -144,16 +340,7 @@ pub fn plus(input: TokenStream) -> TokenStream {
             // Handle procedural macro
             quote! { #mac }
         }
-        Expr::Lit(ExprLit { lit, .. }) => match lit {
-            Lit::Char(c) => {
-                let count =
-                    gregex_logic::TERMINAL_COUNT.fetch_add(1, core::sync::atomic::Ordering::SeqCst);
-                quote! {
-                    gregex_logic::translation::node::Node::Terminal(#c, #count)
-                }
-            }
-            _ => panic!("Unsupported literal type"),
-        },
+        Expr::Lit(ExprLit { lit, .. }) => lit_to_node(&lit),
         _ => panic!("Unsupported input type"),
     };
 
@@ -183,16 +370,7 @@ pub fn question(input: TokenStream) -> TokenStream {
             // Handle procedural macro
             quote! { #mac }
         }
-        Expr::Lit(ExprLit { lit, .. }) => match lit {
-            Lit::Char(c) => {
-                let count =
-                    gregex_logic::TERMINAL_COUNT.fetch_add(1, core::sync::atomic::Ordering::SeqCst);
-                quote! {
-                    gregex_logic::translation::node::Node::Terminal(#c, #count)
-                }
-            }
-            _ => panic!("Unsupported literal type"),
-        },
+        Expr::Lit(ExprLit { lit, .. }) => lit_to_node(&lit),
         _ => panic!("Unsupported input type"),
     };
 
@@ -230,6 +408,10 @@ pub fn regex(input: TokenStream) -> TokenStream {
                 quote! {
                     gregex_logic::translation::node::Node::Terminal(#c, #count)
                 }
+            }
+            Lit::Str(s) => {
+                // Parse the regex string
+                regex_parser::parse(&s.value())
             }
             _ => panic!("Unsupported literal type"),
         },

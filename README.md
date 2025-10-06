@@ -8,6 +8,8 @@ Gregex is a regular expression solver which utilizes Non-deterministic Finite Au
 
 - **NFA-based matching**: Uses Glushkov's construction for efficient regex matching
 - **Macro-based API**: Intuitive macro interface for building regex patterns
+- **String literal support**: All operator macros support string literals for multi-character patterns
+- **Regex string parsing**: Parse regex strings directly with `regex!("(a*)+b")` syntax
 - **Multiple operators**: Support for concatenation, alternation, repetition (Kleene star, plus, question)
 - **Type-safe**: Compile-time regex construction with Rust's procedural macros
 
@@ -44,6 +46,60 @@ fn main() {
     assert_eq!(runner.run("ba"), false);
 }
 ```
+
+### String Literal Support
+
+All operator macros support string literals for convenient multi-character patterns:
+
+```rust
+use gregex::*;
+
+// Concatenate a string
+let runner = regex!(dot!("hello", " ", "world"));
+assert_eq!(runner.run("hello world"), true);
+
+// Star on a string
+let runner = regex!(star!("ab"));
+assert_eq!(runner.run("ababab"), true);
+
+// Plus on a string  
+let runner = regex!(plus!("hello"));
+assert_eq!(runner.run("hellohello"), true);
+```
+
+### Regex String Parsing
+
+Parse regex strings directly with the `regex!` macro using a simple Pratt parser:
+
+```rust
+use gregex::*;
+
+// Simple patterns
+let runner = regex!("abc");
+assert_eq!(runner.run("abc"), true);
+
+// With operators
+let runner = regex!("a+b*");
+assert_eq!(runner.run("aabbb"), true);
+
+// Complex patterns with grouping
+let runner = regex!("(a|b)+");
+assert_eq!(runner.run("abab"), true);
+
+// Nested operators
+let runner = regex!("(a*)+b");
+assert_eq!(runner.run("aaab"), true);
+```
+
+**Supported regex syntax:**
+- Literals: `a`, `b`, `c`, ...
+- Concatenation: `ab` (implicit)
+- Alternation: `a|b`
+- Kleene star: `a*` (zero or more)
+- Plus: `a+` (one or more)
+- Question: `a?` (zero or one)
+- Grouping: `(ab)*`
+
 
 ### Operators
 
@@ -131,6 +187,12 @@ cargo run --example question
 
 # Real-world pattern matching
 cargo run --example real_world_patterns
+
+# String literal support in macros
+cargo run --example string_support
+
+# Regex string parsing
+cargo run --example regex_string_parsing
 ```
 
 ## How It Works
