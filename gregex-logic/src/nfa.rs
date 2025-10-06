@@ -62,14 +62,82 @@ impl<'t> Iterator for CapturesIter<'t> {
 #[derive(Debug, Default)]
 pub struct NFA {
     /// Set of all possible states of the NFA.
-    states: HashSet<u32>,
+    pub(crate) states: HashSet<u32>,
     /// Set of all accepting states. If the NFA ends at any one if these the simulation is succesful.
-    accept: HashSet<u32>,
+    pub(crate) accept: HashSet<u32>,
     /// The transition function is a map from a pair of a state and a character to a set of states.
-    transition_function: HashMap<(u32, char), HashSet<u32>>,
+    pub(crate) transition_function: HashMap<(u32, char), HashSet<u32>>,
 }
 
 impl NFA {
+    /// Create a new empty NFA
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Add a state to the NFA
+    pub fn add_state(&mut self, state: u32) {
+        self.states.insert(state);
+    }
+
+    /// Add an accepting state to the NFA
+    pub fn add_accept_state(&mut self, state: u32) {
+        self.accept.insert(state);
+    }
+
+    /// Add a transition to the NFA
+    pub fn add_transition(&mut self, from: u32, symbol: char, to: u32) {
+        self.transition_function
+            .entry((from, symbol))
+            .or_insert_with(HashSet::new)
+            .insert(to);
+    }
+
+    /// Construct an NFA from raw data (used by macros for compile-time construction)
+    pub fn from_raw(
+        states: Vec<u32>,
+        accept: Vec<u32>,
+        transitions: Vec<((u32, char), Vec<u32>)>,
+    ) -> Self {
+        Self {
+            states: states.into_iter().collect(),
+            accept: accept.into_iter().collect(),
+            transition_function: transitions
+                .into_iter()
+                .map(|(key, vals)| (key, vals.into_iter().collect()))
+                .collect(),
+        }
+    }
+
+    /// Get states (for compile-time serialization)
+    pub fn get_states(&self) -> Vec<u32> {
+        let mut states: Vec<_> = self.states.iter().copied().collect();
+        states.sort();
+        states
+    }
+
+    /// Get accept states (for compile-time serialization)
+    pub fn get_accept_states(&self) -> Vec<u32> {
+        let mut accept: Vec<_> = self.accept.iter().copied().collect();
+        accept.sort();
+        accept
+    }
+
+    /// Get transitions (for compile-time serialization)
+    pub fn get_transitions(&self) -> Vec<((u32, char), Vec<u32>)> {
+        let mut transitions: Vec<_> = self
+            .transition_function
+            .iter()
+            .map(|(&key, val)| {
+                let mut vals: Vec<_> = val.iter().copied().collect();
+                vals.sort();
+                (key, vals)
+            })
+            .collect();
+        transitions.sort_by_key(|(k, _)| *k);
+        transitions
+    }
+
     /// Checks if the pattern matches anywhere in the input text.
     ///
     /// This is the primary matching method, similar to Rust's standard regex `is_match`.
