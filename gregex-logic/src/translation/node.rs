@@ -26,9 +26,16 @@ pub fn nullability_set(regex_tree: &Node) -> HashSet<SetTerminal> {
                 set.extend(nullability_set(right.as_ref().unwrap()));
             }
             Operator::Concat => {
-                set.extend(nullability_set(left));
+                let left_set = nullability_set(left);
                 let right_set = nullability_set(right.as_ref().unwrap());
-                set.extend(right_set);
+                // Concat is nullable only if both left and right are nullable
+                if left_set.contains(&SetTerminal::Epsilon)
+                    && right_set.contains(&SetTerminal::Epsilon)
+                {
+                    set.insert(SetTerminal::Epsilon);
+                } else {
+                    set.insert(SetTerminal::Empty);
+                }
             }
             Operator::Production => {
                 set.insert(SetTerminal::Epsilon);
