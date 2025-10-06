@@ -209,4 +209,233 @@ mod tests {
         assert!(!nfa.run("b"));
         assert!(!nfa.run("ba"));
     }
+
+    #[test]
+    fn test_operator_combinations_plus_question() {
+        // Test a+b? (one or more 'a' followed by zero or one 'b')
+        use crate::translation::node::{
+            factors_set, nullability_set, prefix_set, suffix_set, Node,
+        };
+        use crate::translation::operator::Operator;
+
+        let tree = Node::Operation(
+            Operator::Concat,
+            Box::new(Node::Operation(
+                Operator::Plus,
+                Box::new(Node::Terminal('a', 1)),
+                None,
+            )),
+            Some(Box::new(Node::Operation(
+                Operator::Question,
+                Box::new(Node::Terminal('b', 2)),
+                None,
+            ))),
+        );
+
+        let prefix = prefix_set(&tree);
+        let suffix = suffix_set(&tree);
+        let factors = factors_set(&tree);
+        let nullability = nullability_set(&tree);
+
+        let nfa = NFA::set_to_nfa(&prefix, &suffix, &factors, &nullability);
+
+        assert!(nfa.run("a"));
+        assert!(nfa.run("ab"));
+        assert!(nfa.run("aa"));
+        assert!(nfa.run("aab"));
+        assert!(!nfa.run("abb"));
+        assert!(!nfa.run(""));
+        assert!(!nfa.run("b"));
+    }
+
+    #[test]
+    fn test_operator_combinations_star_plus() {
+        // Test a*b+ (zero or more 'a' followed by one or more 'b')
+        use crate::translation::node::{
+            factors_set, nullability_set, prefix_set, suffix_set, Node,
+        };
+        use crate::translation::operator::Operator;
+
+        let tree = Node::Operation(
+            Operator::Concat,
+            Box::new(Node::Operation(
+                Operator::Production,
+                Box::new(Node::Terminal('a', 1)),
+                None,
+            )),
+            Some(Box::new(Node::Operation(
+                Operator::Plus,
+                Box::new(Node::Terminal('b', 2)),
+                None,
+            ))),
+        );
+
+        let prefix = prefix_set(&tree);
+        let suffix = suffix_set(&tree);
+        let factors = factors_set(&tree);
+        let nullability = nullability_set(&tree);
+
+        let nfa = NFA::set_to_nfa(&prefix, &suffix, &factors, &nullability);
+
+        assert!(nfa.run("b"));
+        assert!(nfa.run("ab"));
+        assert!(nfa.run("aab"));
+        assert!(nfa.run("bb"));
+        assert!(nfa.run("abb"));
+        assert!(!nfa.run(""));
+        assert!(!nfa.run("a"));
+        assert!(!nfa.run("aa"));
+    }
+
+    #[test]
+    fn test_operator_combinations_question_star() {
+        // Test a?b* (zero or one 'a' followed by zero or more 'b')
+        use crate::translation::node::{
+            factors_set, nullability_set, prefix_set, suffix_set, Node,
+        };
+        use crate::translation::operator::Operator;
+
+        let tree = Node::Operation(
+            Operator::Concat,
+            Box::new(Node::Operation(
+                Operator::Question,
+                Box::new(Node::Terminal('a', 1)),
+                None,
+            )),
+            Some(Box::new(Node::Operation(
+                Operator::Production,
+                Box::new(Node::Terminal('b', 2)),
+                None,
+            ))),
+        );
+
+        let prefix = prefix_set(&tree);
+        let suffix = suffix_set(&tree);
+        let factors = factors_set(&tree);
+        let nullability = nullability_set(&tree);
+
+        let nfa = NFA::set_to_nfa(&prefix, &suffix, &factors, &nullability);
+
+        assert!(nfa.run(""));
+        assert!(nfa.run("a"));
+        assert!(nfa.run("b"));
+        assert!(nfa.run("ab"));
+        assert!(nfa.run("abb"));
+        assert!(nfa.run("bb"));
+        assert!(!nfa.run("aa"));
+        assert!(!nfa.run("aab"));
+    }
+
+    #[test]
+    fn test_or_with_plus_and_question() {
+        // Test a+|b? (one or more 'a' OR zero or one 'b')
+        use crate::translation::node::{
+            factors_set, nullability_set, prefix_set, suffix_set, Node,
+        };
+        use crate::translation::operator::Operator;
+
+        let tree = Node::Operation(
+            Operator::Or,
+            Box::new(Node::Operation(
+                Operator::Plus,
+                Box::new(Node::Terminal('a', 1)),
+                None,
+            )),
+            Some(Box::new(Node::Operation(
+                Operator::Question,
+                Box::new(Node::Terminal('b', 2)),
+                None,
+            ))),
+        );
+
+        let prefix = prefix_set(&tree);
+        let suffix = suffix_set(&tree);
+        let factors = factors_set(&tree);
+        let nullability = nullability_set(&tree);
+
+        let nfa = NFA::set_to_nfa(&prefix, &suffix, &factors, &nullability);
+
+        assert!(nfa.run(""));
+        assert!(nfa.run("a"));
+        assert!(nfa.run("aa"));
+        assert!(nfa.run("b"));
+        assert!(!nfa.run("ab"));
+        assert!(!nfa.run("bb"));
+    }
+
+    #[test]
+    fn test_nested_operators() {
+        // Test (a+)* (zero or more of one-or-more 'a')
+        use crate::translation::node::{
+            factors_set, nullability_set, prefix_set, suffix_set, Node,
+        };
+        use crate::translation::operator::Operator;
+
+        let tree = Node::Operation(
+            Operator::Production,
+            Box::new(Node::Operation(
+                Operator::Plus,
+                Box::new(Node::Terminal('a', 1)),
+                None,
+            )),
+            None,
+        );
+
+        let prefix = prefix_set(&tree);
+        let suffix = suffix_set(&tree);
+        let factors = factors_set(&tree);
+        let nullability = nullability_set(&tree);
+
+        let nfa = NFA::set_to_nfa(&prefix, &suffix, &factors, &nullability);
+
+        assert!(nfa.run(""));
+        assert!(nfa.run("a"));
+        assert!(nfa.run("aa"));
+        assert!(nfa.run("aaa"));
+        assert!(!nfa.run("b"));
+    }
+
+    #[test]
+    fn test_complex_combination() {
+        // Test (a|b)+c? (one or more of 'a' or 'b', followed by zero or one 'c')
+        use crate::translation::node::{
+            factors_set, nullability_set, prefix_set, suffix_set, Node,
+        };
+        use crate::translation::operator::Operator;
+
+        let tree = Node::Operation(
+            Operator::Concat,
+            Box::new(Node::Operation(
+                Operator::Plus,
+                Box::new(Node::Operation(
+                    Operator::Or,
+                    Box::new(Node::Terminal('a', 1)),
+                    Some(Box::new(Node::Terminal('b', 2))),
+                )),
+                None,
+            )),
+            Some(Box::new(Node::Operation(
+                Operator::Question,
+                Box::new(Node::Terminal('c', 3)),
+                None,
+            ))),
+        );
+
+        let prefix = prefix_set(&tree);
+        let suffix = suffix_set(&tree);
+        let factors = factors_set(&tree);
+        let nullability = nullability_set(&tree);
+
+        let nfa = NFA::set_to_nfa(&prefix, &suffix, &factors, &nullability);
+
+        assert!(nfa.run("a"));
+        assert!(nfa.run("b"));
+        assert!(nfa.run("ac"));
+        assert!(nfa.run("bc"));
+        assert!(nfa.run("abc"));
+        assert!(nfa.run("aac"));
+        assert!(!nfa.run(""));
+        assert!(!nfa.run("c"));
+        assert!(!nfa.run("acc"));
+    }
 }
