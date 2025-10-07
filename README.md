@@ -1,6 +1,4 @@
-# Gregex ![crates.io](https://img.shields.io/crates/v/gregex.svg) ![Build Passing](https://github.com/Saphereye/gregex/actions/workflows/ci.yml/badge.svg)
-
-![](https://github.com/Saphereye/gregex/raw/master/assets/gregex_workflow.excalidraw.svg)
+# Gregex ![crates.io](https://img.shields.io/crates/v/gregex.svg) ![Build Passing]
 
 Gregex is a powerful regular expression library that compiles regex patterns to Non-deterministic Finite Automata (NFA) at compile-time using Glushkov's construction algorithm. Write regex patterns as strings and let Rust's procedural macros do the rest!
 
@@ -16,12 +14,11 @@ Gregex is a powerful regular expression library that compiles regex patterns to 
 
 Add gregex to your `Cargo.toml`:
 
-```toml
-[dependencies]
-gregex = "0.8.0"
+```bash
+cargo add --git https://github.com/Saphereye/gregex
 ```
 
-### Simple Example (Recommended: String Syntax)
+### Simple Example
 
 ```rust
 use gregex::*;
@@ -46,8 +43,6 @@ Gregex provides a standard regex API similar to Rust's `regex` crate:
 | `is_match(text)` | Check if pattern exists in text | `pattern.is_match("hello")` |
 | `find(text)` | Get first match position | `pattern.find("text")` → `Some((start, end))` |
 | `find_iter(text)` | Iterator over all matches | `pattern.find_iter("text").collect()` |
-| `captures(text)` | Capture groups (todo) | Returns `None` currently |
-| `captures_iter(text)` | Iterator for captures (todo) | Empty iterator |
 
 ## Regex Syntax Reference
 

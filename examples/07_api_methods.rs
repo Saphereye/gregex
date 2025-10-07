@@ -59,17 +59,5 @@ fn main() {
     assert_eq!(matches.len(), 3);
     println!("   Found {} matches\n", matches.len());
 
-    // 5. captures: Capture groups (future feature)
-    println!("5. captures(text) - Capture groups (not yet implemented):");
-    let result = pattern.captures("ab");
-    assert!(result.is_none());
-    println!("   captures(\"ab\"): None (future feature)\n");
-
-    // 6. captures_iter: Iterator for captures (future feature)
-    println!("6. captures_iter(text) - Captures iterator (not yet implemented):");
-    let count = pattern.captures_iter("ab").count();
-    assert_eq!(count, 0);
-    println!("   captures_iter(\"ab\").count(): 0 (future feature)\n");
-
     println!("All API methods work correctly!");
 }

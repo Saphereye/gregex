@@ -37,27 +37,6 @@ impl<'t> Iterator for FindIter<'t> {
     }
 }
 
-/// Placeholder type for capture groups (not yet implemented).
-#[derive(Debug, PartialEq)]
-pub struct Captures {
-    // Future: will contain captured substrings
-}
-
-/// Placeholder iterator for capture groups (not yet implemented).
-pub struct CapturesIter<'t> {
-    _nfa: &'t NFA,
-    _text: &'t str,
-    _pos: usize,
-}
-
-impl<'t> Iterator for CapturesIter<'t> {
-    type Item = Captures;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        None // Not yet implemented
-    }
-}
-
 /// The `NFA` struct represents a non-deterministic finite automaton.
 #[derive(Debug, Default)]
 pub struct NFA {
@@ -209,31 +188,6 @@ impl NFA {
             nfa: self,
             text,
             pos: 0,
-        }
-    }
-
-    /// Placeholder for capture group functionality.
-    ///
-    /// **Note**: Capture groups are not yet implemented. This method currently
-    /// returns `None`. The current implementation focuses on matching without
-    /// capturing subgroups.
-    ///
-    /// # Future Enhancement
-    ///
-    /// A future version will support capturing groups with syntax like `(a+)`.
-    pub fn captures(&self, _text: &str) -> Option<Captures> {
-        None // Not yet implemented
-    }
-
-    /// Placeholder for capture group iterator functionality.
-    ///
-    /// **Note**: Capture groups are not yet implemented. This method currently
-    /// returns an empty iterator.
-    pub fn captures_iter<'t>(&'t self, text: &'t str) -> CapturesIter<'t> {
-        CapturesIter {
-            _nfa: self,
-            _text: text,
-            _pos: 0,
         }
     }
 
