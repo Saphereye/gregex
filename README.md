@@ -46,11 +46,8 @@ Gregex provides a standard regex API similar to Rust's `regex` crate:
 | `is_match(text)` | Check if pattern exists in text | `pattern.is_match("hello")` |
 | `find(text)` | Get first match position | `pattern.find("text")` → `Some((start, end))` |
 | `find_iter(text)` | Iterator over all matches | `pattern.find_iter("text").collect()` |
-| `captures(text)` | Capture groups (not yet implemented) | Returns `None` currently |
-| `captures_iter(text)` | Iterator for captures (not yet implemented) | Empty iterator |
-
-**Note**: The old `run()` method is deprecated. Use `is_match()` instead.
-
+| `captures(text)` | Capture groups (todo) | Returns `None` currently |
+| `captures_iter(text)` | Iterator for captures (todo) | Empty iterator |
 
 ## Regex Syntax Reference
 
@@ -105,10 +102,6 @@ if let Some((start, end)) = pattern.find("xyzaabccxyz") {
 let nested = regex!("((a|b)+c)*");
 assert!(nested.is_match("acbc"));
 ```
-
-### 2. Operator Macros (Alternative API)
-
-Note: Operator macros have been removed in favor of the string-based syntax for cleaner, more maintainable code and guaranteed compile-time NFA construction.
 
 ## Examples
 

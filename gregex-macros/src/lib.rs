@@ -1,4 +1,3 @@
-#[doc = include_str!("../README.md")]
 #[cfg(not(doctest))]
 extern crate proc_macro;
 
