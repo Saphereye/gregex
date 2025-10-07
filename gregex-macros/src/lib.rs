@@ -1,3 +1,14 @@
+//! # Gregex Macros
+//!
+//! Procedural macros for compile-time regular expression parsing and NFA construction.
+//!
+//! This crate provides the `regex!` macro that parses regex pattern strings at compile time
+//! and generates optimized NFA construction code, eliminating runtime parsing overhead.
+//!
+//! For detailed documentation, see the [README](https://github.com/Saphereye/gregex/blob/master/gregex-macros/README.md).
+
+#![doc = include_str!("../README.md")]
+
 #[cfg(not(doctest))]
 extern crate proc_macro;
 
