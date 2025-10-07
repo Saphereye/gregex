@@ -4,7 +4,7 @@ extern crate proc_macro;
 
 use proc_macro::TokenStream;
 use quote::quote;
-use syn::{parse_macro_input, Expr, ExprLit, ExprMacro, Lit};
+use syn::{parse_macro_input, Expr, ExprLit, Lit};
 
 /// Internal regex parser module using Pratt parsing technique.
 ///
@@ -289,285 +289,45 @@ mod regex_parser {
     }
 }
 
-/// Helper function to convert a literal (char or string) into a Node tree.
-///
-/// This function handles both single character literals and string literals,
-/// automatically expanding strings into concatenated terminal nodes.
-///
-/// # Arguments
-///
-/// * `lit` - A reference to a `Lit` (literal) from the syn crate
-///
-/// # Returns
-///
-/// A `TokenStream` representing the generated Node structure
-///
-/// # Panics
-///
-/// Panics if the literal is not a `Char` or `Str`, or if the string is empty.
-fn lit_to_node(lit: &Lit) -> proc_macro2::TokenStream {
-    match lit {
-        Lit::Char(c) => {
-            let count =
-                gregex_logic::TERMINAL_COUNT.fetch_add(1, core::sync::atomic::Ordering::SeqCst);
-            quote! {
-                gregex_logic::translation::node::Node::Terminal(#c, #count)
-            }
-        }
-        Lit::Str(s) => {
-            let chars: Vec<char> = s.value().chars().collect();
-            if chars.is_empty() {
-                panic!("Empty strings are not supported");
-            }
-            let nodes: Vec<_> = chars
-                .iter()
-                .map(|c| {
-                    let count = gregex_logic::TERMINAL_COUNT
-                        .fetch_add(1, core::sync::atomic::Ordering::SeqCst);
-                    quote! {
-                        gregex_logic::translation::node::Node::Terminal(#c, #count)
-                    }
-                })
-                .collect();
-
-            // Chain nodes with Concat operators
-            let mut result = nodes[0].clone();
-            for node in nodes.iter().skip(1) {
-                result = quote! {
-                    gregex_logic::translation::node::Node::Operation(
-                        gregex_logic::translation::operator::Operator::Concat,
-                        Box::new(#result),
-                        Some(Box::new(#node))
-                    )
-                };
-            }
-            result
-        }
-        _ => panic!("Unsupported literal type"),
-    }
-}
-
-/// Creates a concatenation (sequence) pattern from the given expressions.
-///
-/// Accepts character literals, string literals, and nested macro expressions.
-/// String literals are automatically expanded into sequences.
-#[proc_macro]
-pub fn dot(input: TokenStream) -> TokenStream {
-    let inputs = parse_macro_input!(input with syn::punctuated::Punctuated::<Expr, syn::Token![,]>::parse_terminated);
-
-    let nodes = inputs.iter().map(|expr| {
-        match expr {
-            Expr::Macro(ExprMacro { mac, .. }) => {
-                // Handle procedural macro
-                quote! { #mac }
-            }
-            Expr::Lit(ExprLit { lit, .. }) => lit_to_node(&lit),
-            _ => panic!("Unsupported input type"),
-        }
-    });
-
-    // Generate the code for concatenating nodes
-    let mut iter = nodes.into_iter();
-    let first = iter.next().expect("The input is empty");
-    let operations = iter.fold(first, |left, right| {
-        quote! {
-            gregex_logic::translation::node::Node::Operation(
-                gregex_logic::translation::operator::Operator::Concat,
-                Box::new(#left),
-                Some(Box::new(#right))
-            )
-        }
-    });
-
-    // Generate the final token stream
-    let gen = quote! {
-        #operations
-    };
-
-    gen.into()
-}
-
-/// Creates an alternation (OR) pattern from the given expressions.
-///
-/// Matches if any one of the given expressions matches.
-/// Accepts character literals, string literals, and nested macro expressions.
-#[proc_macro]
-pub fn or(input: TokenStream) -> TokenStream {
-    let inputs = parse_macro_input!(input with syn::punctuated::Punctuated::<Expr, syn::Token![,]>::parse_terminated);
-
-    let nodes = inputs.iter().map(|expr| {
-        match expr {
-            Expr::Macro(ExprMacro { mac, .. }) => {
-                // Handle procedural macro
-                quote! { #mac }
-            }
-            Expr::Lit(ExprLit { lit, .. }) => lit_to_node(&lit),
-            _ => panic!("Unsupported input type"),
-        }
-    });
-
-    // Generate the code for concatenating nodes
-    let mut iter = nodes.into_iter();
-    let first = iter.next().expect("The input is empty");
-    let operations = iter.fold(first, |left, right| {
-        quote! {
-            gregex_logic::translation::node::Node::Operation(
-                gregex_logic::translation::operator::Operator::Or,
-                Box::new(#left),
-                Some(Box::new(#right))
-            )
-        }
-    });
-
-    // Generate the final token stream
-    let gen = quote! {
-        #operations
-    };
-
-    gen.into()
-}
-
-/// Creates a Kleene star (zero or more) pattern for the given expression.
-///
-/// Matches zero or more repetitions of the input.
-/// Accepts character literals, string literals, and nested macro expressions.
-#[proc_macro]
-pub fn star(input: TokenStream) -> TokenStream {
-    let expr = parse_macro_input!(input as Expr);
-
-    let node = match expr {
-        Expr::Macro(ExprMacro { mac, .. }) => {
-            // Handle procedural macro
-            quote! { #mac }
-        }
-        Expr::Lit(ExprLit { lit, .. }) => lit_to_node(&lit),
-        _ => panic!("Unsupported input type"),
-    };
-
-    // Generate the code for the star operation
-    let operation = quote! {
-        gregex_logic::translation::node::Node::Operation(
-            gregex_logic::translation::operator::Operator::Production,
-            Box::new(#node),
-            None
-        )
-    };
-
-    // Generate the final token stream
-    let gen = quote! {
-        #operation
-    };
-
-    gen.into()
-}
-
-/// Creates a plus (one or more) pattern for the given expression.
-///
-/// Matches one or more repetitions of the input.
-/// Accepts character literals, string literals, and nested macro expressions.
-#[proc_macro]
-pub fn plus(input: TokenStream) -> TokenStream {
-    let expr = parse_macro_input!(input as Expr);
-
-    let node = match expr {
-        Expr::Macro(ExprMacro { mac, .. }) => {
-            // Handle procedural macro
-            quote! { #mac }
-        }
-        Expr::Lit(ExprLit { lit, .. }) => lit_to_node(&lit),
-        _ => panic!("Unsupported input type"),
-    };
-
-    // Generate the code for the plus operation
-    let operation = quote! {
-        gregex_logic::translation::node::Node::Operation(
-            gregex_logic::translation::operator::Operator::Plus,
-            Box::new(#node),
-            None
-        )
-    };
-
-    // Generate the final token stream
-    let gen = quote! {
-        #operation
-    };
-
-    gen.into()
-}
-
-/// Creates a question (zero or one) pattern for the given expression.
-///
-/// Matches zero or one occurrence of the input.
-/// Accepts character literals, string literals, and nested macro expressions.
-#[proc_macro]
-pub fn question(input: TokenStream) -> TokenStream {
-    let expr = parse_macro_input!(input as Expr);
-
-    let node = match expr {
-        Expr::Macro(ExprMacro { mac, .. }) => {
-            // Handle procedural macro
-            quote! { #mac }
-        }
-        Expr::Lit(ExprLit { lit, .. }) => lit_to_node(&lit),
-        _ => panic!("Unsupported input type"),
-    };
-
-    // Generate the code for the question operation
-    let operation = quote! {
-        gregex_logic::translation::node::Node::Operation(
-            gregex_logic::translation::operator::Operator::Question,
-            Box::new(#node),
-            None
-        )
-    };
-
-    // Generate the final token stream
-    let gen = quote! {
-        #operation
-    };
-
-    gen.into()
-}
-
 /// Main regex macro that builds an NFA from a pattern.
 ///
-/// Supports three modes:
-/// 1. String parsing (recommended): Parse regex syntax strings directly like `regex!("(a|b)+")`
-/// 2. Nested macros: Use operator macros like `regex!(dot!(...))`
-/// 3. Character literals: Simple single-character patterns like `regex!('a')`
+/// Supports two modes:
+/// 1. **String parsing (recommended)**: Parse regex syntax strings directly like `regex!("(a|b)+")`
+/// 2. **Character literals**: Simple single-character patterns like `regex!('a')`
 ///
 /// String syntax supports: literals, `ab` (concat), `a|b` (or), `a*` (star), `a+` (plus), `a?` (question), `(...)` (grouping)
 ///
-/// **Note**: The macro now compiles the NFA at compile-time and embeds it directly, resulting in
+/// **Note**: The macro compiles the NFA at compile-time and embeds it directly, resulting in
 /// zero runtime NFA construction overhead.
+///
+/// # Examples
+///
+/// ```rust
+/// use gregex::*;
+///
+/// // String syntax (recommended)
+/// let pattern = regex!("a+b*");
+/// assert!(pattern.is_match("aaabbb"));
+///
+/// // Single character
+/// let pattern = regex!('x');
+/// assert!(pattern.matches_exact("x"));
+/// ```
 #[proc_macro]
 pub fn regex(input: TokenStream) -> TokenStream {
     let expr = parse_macro_input!(input as Expr);
 
     // Convert the input expression into a Node structure
     match expr {
-        Expr::Macro(ExprMacro { mac, .. }) => {
-            // Handle procedural macro - return runtime construction
-            let gen = quote! {
-                {
-                    let regex_tree = #mac;
-                    let prefix_set = gregex_logic::translation::node::prefix_set(&regex_tree);
-                    let suffix_set = gregex_logic::translation::node::suffix_set(&regex_tree);
-                    let factors_set = gregex_logic::translation::node::factors_set(&regex_tree);
-                    let nullability_set = gregex_logic::translation::node::nullability_set(&regex_tree);
-                    gregex_logic::nfa::NFA::set_to_nfa(&prefix_set, &suffix_set, &factors_set, &nullability_set)
-                }
-            };
-            gen.into()
-        }
         Expr::Lit(ExprLit { lit, .. }) => match lit {
             Lit::Char(c) => build_nfa_for_char(c.value()),
             Lit::Str(s) => build_nfa_for_string(&s.value()),
-            _ => panic!("Unsupported literal type"),
+            _ => panic!("regex! only supports string literals and character literals. Use string syntax like regex!(\"a+b*\") instead of macro expressions."),
         },
-        _ => panic!("Unsupported input type"),
+        _ => panic!("regex! only supports string literals and character literals. Use string syntax like regex!(\"a+b*\") instead of macro expressions."),
     }
 }
+
 
 /// Helper function to build NFA at compile time for a single character
 fn build_nfa_for_char(c: char) -> TokenStream {

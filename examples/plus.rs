@@ -2,7 +2,7 @@ extern crate gregex;
 use gregex::*;
 
 fn main() {
-    let runner = regex!(plus!('a'));
+    let runner = regex!("a+");
     println!("Testing 'a': {}", runner.matches_exact("a"));
     println!("Testing 'aa': {}", runner.matches_exact("aa"));
     println!("Testing 'aaa': {}", runner.matches_exact("aaa"));

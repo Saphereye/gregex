@@ -9,11 +9,8 @@ fn main() {
     println!("=== Identifier Validator ===\n");
 
     // Pattern for lowercase identifiers: a-z followed by zero or more a-z or 0-9
-    // Simplified to just 'a' followed by zero or more 'a' or 'b' for demonstration
-    let identifier_validator = regex!(dot!(
-        or!('a', 'b', 'c'),             // First character must be a letter
-        star!(or!('a', 'b', 'c', 'd'))  // Followed by zero or more letters/digits
-    ));
+    // Simplified to just (a|b|c) followed by zero or more (a|b|c|d) for demonstration
+    let identifier_validator = regex!("(a|b|c)(a|b|c|d)*");
 
     let test_cases = vec![
         ("a", true, "single letter"),
@@ -41,7 +38,7 @@ fn main() {
 
     // Pattern for matching paths like: /a, /aa, /aaa (one or more 'a')
     // Using plus operator for "one or more"
-    let path_validator = regex!(plus!('a'));
+    let path_validator = regex!("a+");
 
     let path_tests = vec![
         ("a", true, "single segment"),
@@ -64,9 +61,9 @@ fn main() {
 
     println!("\n=== Optional Protocol Matcher ===\n");
 
-    // Pattern for optional 'http' prefix: http?
+    // Pattern for optional 'http' prefix: h?
     // Using question operator for "zero or one"
-    let protocol_validator = regex!(question!('h'));
+    let protocol_validator = regex!("h?");
 
     let protocol_tests = vec![
         ("", true, "no protocol"),
