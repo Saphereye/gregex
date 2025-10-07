@@ -27,7 +27,7 @@ fn main() {
 
     println!("Testing identifier validation:");
     for (input, expected, description) in test_cases {
-        let result = identifier_validator.run(input);
+        let result = identifier_validator.matches_exact(input);
         let status = if result == expected { "✓" } else { "✗" };
         println!("{} '{}' -> {} ({})", status, input, result, description);
         assert_eq!(
@@ -52,7 +52,7 @@ fn main() {
 
     println!("Testing path validation (expecting one or more 'a'):");
     for (input, expected, description) in path_tests {
-        let result = path_validator.run(input);
+        let result = path_validator.matches_exact(input);
         let status = if result == expected { "✓" } else { "✗" };
         println!("{} '{}' -> {} ({})", status, input, result, description);
         assert_eq!(
@@ -76,7 +76,7 @@ fn main() {
 
     println!("Testing optional protocol (expecting zero or one 'h'):");
     for (input, expected, description) in protocol_tests {
-        let result = protocol_validator.run(input);
+        let result = protocol_validator.matches_exact(input);
         let status = if result == expected { "✓" } else { "✗" };
         println!("{} '{}' -> {} ({})", status, input, result, description);
         assert_eq!(

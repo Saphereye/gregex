@@ -83,11 +83,13 @@ mod regex_parser {
         }
     }
 
+    #[allow(dead_code)]
     pub fn parse(input: &str) -> proc_macro2::TokenStream {
         let mut lexer = Lexer::new(input);
         parse_or(&mut lexer)
     }
 
+    #[allow(dead_code)]
     fn parse_or(lexer: &mut Lexer) -> proc_macro2::TokenStream {
         let mut left = parse_concat(lexer);
 
@@ -106,6 +108,7 @@ mod regex_parser {
         left
     }
 
+    #[allow(dead_code)]
     fn parse_concat(lexer: &mut Lexer) -> proc_macro2::TokenStream {
         let mut nodes = Vec::new();
 
@@ -134,6 +137,7 @@ mod regex_parser {
         result
     }
 
+    #[allow(dead_code)]
     fn parse_postfix(lexer: &mut Lexer) -> proc_macro2::TokenStream {
         let mut node = parse_atom(lexer);
 
@@ -176,6 +180,7 @@ mod regex_parser {
         node
     }
 
+    #[allow(dead_code)]
     fn parse_atom(lexer: &mut Lexer) -> proc_macro2::TokenStream {
         match lexer.next() {
             Token::Char(c) => {

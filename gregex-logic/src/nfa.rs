@@ -237,10 +237,21 @@ impl NFA {
         }
     }
 
-    /// Internal helper: checks if the pattern matches the entire input string exactly.
+    /// Checks if the pattern matches the entire input string exactly.
     ///
-    /// This is the core matching logic used by all other methods.
-    fn matches_exact(&self, input: &str) -> bool {
+    /// This is the core matching logic that verifies if the entire input
+    /// string matches the regex pattern from start to end.
+    ///
+    /// For substring matching (finding pattern anywhere in text), use `is_match()` instead.
+    ///
+    /// # Arguments
+    ///
+    /// * `input` - The string to match against
+    ///
+    /// # Returns
+    ///
+    /// `true` if the entire input string exactly matches the pattern, `false` otherwise.
+    pub fn matches_exact(&self, input: &str) -> bool {
         let mut current_states = HashSet::new();
         current_states.insert(0);
         for c in input.chars() {
@@ -253,23 +264,6 @@ impl NFA {
             current_states = next_states;
         }
         !current_states.is_disjoint(&self.accept)
-    }
-
-    /// Legacy method: checks if the pattern matches the exact input string.
-    ///
-    /// **Deprecated**: Use `is_match()` for substring matching.
-    ///
-    /// This method checks if the entire input string matches the pattern exactly,
-    /// which is equivalent to `matches_exact()`.
-    ///
-    /// # Migration Guide
-    ///
-    /// - Old: `pattern.run("exact")` - matches only if entire string is "exact"
-    /// - New: `pattern.is_match("exact")` - matches if "exact" appears anywhere
-    /// - For exact matching: Use anchors in your pattern or check match bounds
-    #[deprecated(since = "0.8.0", note = "Use `is_match()` for standard regex matching")]
-    pub fn run(&self, input: &str) -> bool {
-        self.matches_exact(input)
     }
 
     /// Converts the prefix, suffix and factors sets to a NFA.
@@ -350,7 +344,7 @@ mod tests {
             .into_iter()
             .collect(),
         };
-        assert!(nfa.run("ab"));
+        assert!(nfa.matches_exact("ab"));
     }
 
     #[test]
@@ -367,7 +361,7 @@ mod tests {
             .collect();
         let nullability_set = vec![SetTerminal::Empty].into_iter().collect();
         let nfa = NFA::set_to_nfa(&prefix_set, &suffix_set, &factors_set, &nullability_set);
-        assert!(nfa.run("ab"));
+        assert!(nfa.matches_exact("ab"));
     }
 
     #[test]
@@ -386,11 +380,11 @@ mod tests {
         let nullability_set = vec![SetTerminal::Empty].into_iter().collect();
         let nfa = NFA::set_to_nfa(&prefix_set, &suffix_set, &factors_set, &nullability_set);
 
-        assert!(nfa.run("a"));
-        assert!(nfa.run("aa"));
-        assert!(nfa.run("aaa"));
-        assert!(!nfa.run(""));
-        assert!(!nfa.run("b"));
+        assert!(nfa.matches_exact("a"));
+        assert!(nfa.matches_exact("aa"));
+        assert!(nfa.matches_exact("aaa"));
+        assert!(!nfa.matches_exact(""));
+        assert!(!nfa.matches_exact("b"));
     }
 
     #[test]
@@ -411,9 +405,9 @@ mod tests {
         let nfa = NFA::set_to_nfa(&prefix, &suffix, &factors, &nullability);
 
         // For a?, we expect to match 'a' and empty string
-        assert!(nfa.run("a"));
-        assert!(nfa.run(""));
-        assert!(!nfa.run("aa"));
+        assert!(nfa.matches_exact("a"));
+        assert!(nfa.matches_exact(""));
+        assert!(!nfa.matches_exact("aa"));
     }
 
     #[test]
@@ -441,13 +435,13 @@ mod tests {
 
         let nfa = NFA::set_to_nfa(&prefix, &suffix, &factors, &nullability);
 
-        assert!(nfa.run("ab"));
-        assert!(nfa.run("abab"));
-        assert!(nfa.run("ababab"));
-        assert!(!nfa.run(""));
-        assert!(!nfa.run("a"));
-        assert!(!nfa.run("b"));
-        assert!(!nfa.run("ba"));
+        assert!(nfa.matches_exact("ab"));
+        assert!(nfa.matches_exact("abab"));
+        assert!(nfa.matches_exact("ababab"));
+        assert!(!nfa.matches_exact(""));
+        assert!(!nfa.matches_exact("a"));
+        assert!(!nfa.matches_exact("b"));
+        assert!(!nfa.matches_exact("ba"));
     }
 
     #[test]
@@ -479,13 +473,13 @@ mod tests {
 
         let nfa = NFA::set_to_nfa(&prefix, &suffix, &factors, &nullability);
 
-        assert!(nfa.run("a"));
-        assert!(nfa.run("ab"));
-        assert!(nfa.run("aa"));
-        assert!(nfa.run("aab"));
-        assert!(!nfa.run("abb"));
-        assert!(!nfa.run(""));
-        assert!(!nfa.run("b"));
+        assert!(nfa.matches_exact("a"));
+        assert!(nfa.matches_exact("ab"));
+        assert!(nfa.matches_exact("aa"));
+        assert!(nfa.matches_exact("aab"));
+        assert!(!nfa.matches_exact("abb"));
+        assert!(!nfa.matches_exact(""));
+        assert!(!nfa.matches_exact("b"));
     }
 
     #[test]
@@ -517,14 +511,14 @@ mod tests {
 
         let nfa = NFA::set_to_nfa(&prefix, &suffix, &factors, &nullability);
 
-        assert!(nfa.run("b"));
-        assert!(nfa.run("ab"));
-        assert!(nfa.run("aab"));
-        assert!(nfa.run("bb"));
-        assert!(nfa.run("abb"));
-        assert!(!nfa.run(""));
-        assert!(!nfa.run("a"));
-        assert!(!nfa.run("aa"));
+        assert!(nfa.matches_exact("b"));
+        assert!(nfa.matches_exact("ab"));
+        assert!(nfa.matches_exact("aab"));
+        assert!(nfa.matches_exact("bb"));
+        assert!(nfa.matches_exact("abb"));
+        assert!(!nfa.matches_exact(""));
+        assert!(!nfa.matches_exact("a"));
+        assert!(!nfa.matches_exact("aa"));
     }
 
     #[test]
@@ -556,14 +550,14 @@ mod tests {
 
         let nfa = NFA::set_to_nfa(&prefix, &suffix, &factors, &nullability);
 
-        assert!(nfa.run(""));
-        assert!(nfa.run("a"));
-        assert!(nfa.run("b"));
-        assert!(nfa.run("ab"));
-        assert!(nfa.run("abb"));
-        assert!(nfa.run("bb"));
-        assert!(!nfa.run("aa"));
-        assert!(!nfa.run("aab"));
+        assert!(nfa.matches_exact(""));
+        assert!(nfa.matches_exact("a"));
+        assert!(nfa.matches_exact("b"));
+        assert!(nfa.matches_exact("ab"));
+        assert!(nfa.matches_exact("abb"));
+        assert!(nfa.matches_exact("bb"));
+        assert!(!nfa.matches_exact("aa"));
+        assert!(!nfa.matches_exact("aab"));
     }
 
     #[test]
@@ -595,12 +589,12 @@ mod tests {
 
         let nfa = NFA::set_to_nfa(&prefix, &suffix, &factors, &nullability);
 
-        assert!(nfa.run(""));
-        assert!(nfa.run("a"));
-        assert!(nfa.run("aa"));
-        assert!(nfa.run("b"));
-        assert!(!nfa.run("ab"));
-        assert!(!nfa.run("bb"));
+        assert!(nfa.matches_exact(""));
+        assert!(nfa.matches_exact("a"));
+        assert!(nfa.matches_exact("aa"));
+        assert!(nfa.matches_exact("b"));
+        assert!(!nfa.matches_exact("ab"));
+        assert!(!nfa.matches_exact("bb"));
     }
 
     #[test]
@@ -628,11 +622,11 @@ mod tests {
 
         let nfa = NFA::set_to_nfa(&prefix, &suffix, &factors, &nullability);
 
-        assert!(nfa.run(""));
-        assert!(nfa.run("a"));
-        assert!(nfa.run("aa"));
-        assert!(nfa.run("aaa"));
-        assert!(!nfa.run("b"));
+        assert!(nfa.matches_exact(""));
+        assert!(nfa.matches_exact("a"));
+        assert!(nfa.matches_exact("aa"));
+        assert!(nfa.matches_exact("aaa"));
+        assert!(!nfa.matches_exact("b"));
     }
 
     #[test]
@@ -668,14 +662,14 @@ mod tests {
 
         let nfa = NFA::set_to_nfa(&prefix, &suffix, &factors, &nullability);
 
-        assert!(nfa.run("a"));
-        assert!(nfa.run("b"));
-        assert!(nfa.run("ac"));
-        assert!(nfa.run("bc"));
-        assert!(nfa.run("abc"));
-        assert!(nfa.run("aac"));
-        assert!(!nfa.run(""));
-        assert!(!nfa.run("c"));
-        assert!(!nfa.run("acc"));
+        assert!(nfa.matches_exact("a"));
+        assert!(nfa.matches_exact("b"));
+        assert!(nfa.matches_exact("ac"));
+        assert!(nfa.matches_exact("bc"));
+        assert!(nfa.matches_exact("abc"));
+        assert!(nfa.matches_exact("aac"));
+        assert!(!nfa.matches_exact(""));
+        assert!(!nfa.matches_exact("c"));
+        assert!(!nfa.matches_exact("acc"));
     }
 }
