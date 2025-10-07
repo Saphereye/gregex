@@ -129,7 +129,3 @@ This crate depends on `gregex-logic` for:
 - NFA construction logic
 
 The macro acts as a compile-time bridge, converting string patterns into executable NFA data structures.
-
-## License
-
-MIT - See LICENSE file in the repository root.
