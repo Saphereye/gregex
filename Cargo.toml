@@ -1,10 +1,10 @@
 [package]
 name = "gregex"
-version = "0.7.2"
+version = "0.8.0"
 edition = "2021"
 authors = ["Saphereye <adarshdas950@gmail.com>"]
 license = "MIT"
-description = "Regex solver utilizing NFA"
+description = "Regex solver with string parsing support utilizing NFA"
 keywords = ["regex", "nfa", "automata"]
 categories = ["text-processing"]
 documentation = "https://docs.rs/gregex"
@@ -26,5 +26,5 @@ members = [
 ]
 
 [dependencies]
-gregex-macros = { path = "gregex-macros", version = "0.1.0" }
-gregex-logic = { path = "gregex-logic", version = "0.1.0" }
+gregex-macros = { path = "gregex-macros", version = "0.2.0" }
+gregex-logic = { path = "gregex-logic", version = "0.2.0" }
