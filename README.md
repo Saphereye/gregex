@@ -1,4 +1,4 @@
-# Gregex ![crates.io](https://img.shields.io/crates/v/gregex.svg) ![Build Passing]
+# Gregex ![crates.io](https://img.shields.io/crates/v/gregex.svg)
 
 Gregex is a powerful regular expression library that compiles regex patterns to Non-deterministic Finite Automata (NFA) at compile-time using Glushkov's construction algorithm. Write regex patterns as strings and let Rust's procedural macros do the rest!
 
