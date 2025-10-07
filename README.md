@@ -4,16 +4,15 @@
 
 Gregex is a powerful regular expression library that compiles regex patterns to Non-deterministic Finite Automata (NFA) at compile-time using Glushkov's construction algorithm. Write regex patterns as strings and let Rust's procedural macros do the rest!
 
-## ✨ Features
+## Features
 
-- 🎯 **String-based regex parsing**: Write natural regex syntax like `regex!("(a|b)+")`
-- ⚡ **Compile-time construction**: Zero runtime regex parsing overhead
-- 🔒 **Type-safe**: Leverages Rust's procedural macros for safety
-- 🧩 **NFA-based matching**: Uses Glushkov's construction for efficient matching
-- 📦 **Multiple API styles**: String parsing, operator macros, or character literals
-- 🎨 **Rich operator support**: `*`, `+`, `?`, `|`, concatenation, and grouping
+- **String-based regex parsing**: Write natural regex syntax like `regex!("(a|b)+")`
+- **Compile-time construction**: Zero runtime regex parsing overhead
+- **Type-safe**: Leverages Rust's procedural macros for safety
+- **NFA-based matching**: Uses Glushkov's construction for efficient matching
+- **Rich operator support**: `*`, `+`, `?`, `|`, concatenation, and grouping
 
-## 🚀 Quick Start
+## Quick Start
 
 Add gregex to your `Cargo.toml`:
 
@@ -38,7 +37,7 @@ fn main() {
 }
 ```
 
-## 🔧 API Methods
+## API Methods
 
 Gregex provides a standard regex API similar to Rust's `regex` crate:
 
@@ -53,7 +52,7 @@ Gregex provides a standard regex API similar to Rust's `regex` crate:
 **Note**: The old `run()` method is deprecated. Use `is_match()` instead.
 
 
-## 📖 Regex Syntax Reference
+## Regex Syntax Reference
 
 When using string-based syntax with `regex!("...")`, the following operators are supported:
 
@@ -77,7 +76,7 @@ When using string-based syntax with `regex!("...")`, the following operators are
 **Future Enhancement**: Full wildcard support (`.` and `\w`, `\d`, etc.) is planned for a future version.
 
 
-## 💡 Usage Examples
+## Usage Examples
 
 ### 1. String-Based Syntax (Recommended)
 
@@ -109,75 +108,59 @@ assert!(nested.is_match("acbc"));
 
 ### 2. Operator Macros (Alternative API)
 
-Use explicit operator macros for more control:
+Note: Operator macros have been removed in favor of the string-based syntax for cleaner, more maintainable code and guaranteed compile-time NFA construction.
 
-```rust
-use gregex::*;
-
-// Concatenation with strings
-let pattern = regex!(dot!("hello", " ", "world"));
-assert!(pattern.is_match("hello world"));
-
-// Operators work with strings too
-let pattern = regex!(star!("ab"));
-assert!(pattern.is_match("ababab"));
-
-let pattern = regex!(plus!("hello"));
-assert!(pattern.is_match("hellohello"));
-```
-
-### 3. Combining Operators
-
-Both string syntax and macros can be mixed and nested:
-
-```rust
-use gregex::*;
-
-// Nested macros
-let pattern = regex!(dot!(plus!('a'), question!('b')));
-assert!(pattern.is_match("aab"));
-
-// String syntax is usually clearer for the same pattern
-let pattern = regex!("a+b?");
-assert!(pattern.is_match("aab"));
-
-// Find all matches
-for (start, end) in pattern.find_iter("xaabxaaabx") {
-    println!("Match at {}-{}", start, end);
-}
-```
-
-## 📦 Examples
+## Examples
 
 Run the included examples to see gregex in action:
 
+### Basic Operator Examples
+
+These examples demonstrate individual regex operators:
+
 ```bash
-# New API demonstration (is_match, find, find_iter)
-cargo run --example new_api_demo
+# Basic concatenation (matching "abc")
+cargo run --example 01_basic_concatenation
 
-# Basic concatenation
-cargo run --example dot
+# Alternation/OR operator (a|b|c)
+cargo run --example 02_alternation
 
-# Alternation (OR)
-cargo run --example or
+# Kleene star - zero or more (a*)
+cargo run --example 03_kleene_star
 
-# Kleene star (zero or more)
-cargo run --example star
+# Plus operator - one or more (a+)
+cargo run --example 04_plus_operator
 
-# Plus operator (one or more)
-cargo run --example plus
+# Question operator - zero or one (a?)
+cargo run --example 05_question_operator
 
-# Question operator (zero or one)
-cargo run --example question
+# Grouping and operator precedence
+cargo run --example 06_grouping_and_precedence
+```
 
-# Real-world pattern matching
-cargo run --example real_world_patterns
+### Advanced Examples
 
-# String literal support in macros
-cargo run --example string_support
+```bash
+# Complete API methods demonstration
+cargo run --example 07_api_methods
 
-# Regex string parsing
-cargo run --example regex_string_parsing
+# Compile-time NFA construction verification
+cargo run --example 08_compile_time_construction
+```
+
+### Use Case Examples
+
+Real-world applications demonstrating practical pattern matching:
+
+```bash
+# Validate programming identifiers
+cargo run --example usecase_identifier_validator
+
+# Match URL-like paths
+cargo run --example usecase_simple_url_matcher
+
+# Search for patterns in text
+cargo run --example usecase_text_search
 ```
 
 ## How It Works

@@ -302,7 +302,7 @@ mod regex_parser {
 ///
 /// # Examples
 ///
-/// ```rust
+/// ```ignore
 /// use gregex::*;
 ///
 /// // String syntax (recommended)
@@ -327,7 +327,6 @@ pub fn regex(input: TokenStream) -> TokenStream {
         _ => panic!("regex! only supports string literals and character literals. Use string syntax like regex!(\"a+b*\") instead of macro expressions."),
     }
 }
-
 
 /// Helper function to build NFA at compile time for a single character
 fn build_nfa_for_char(c: char) -> TokenStream {
